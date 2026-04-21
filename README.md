@@ -69,6 +69,39 @@ The core of the system is the **ESP32-TTGO** development board, which performs l
 HeatWatch/
 ├── edge/               # ESP32 firmware (Arduino framework)
 ├── backend/            # ThingsBoard configurations & MQTT scripts
+├── simulator/          # Python-based device simulator & test tools
 ├── docs/               # Technical specifications and research
+├── pyproject.toml      # Poetry dependency management
 └── README.md           # Project overview
 ```
+
+---
+
+## 💻 Development & Simulation
+
+To facilitate rapid testing without requiring physical hardware, a **Device Simulator** is provided in the `simulator/` directory. It uses **MQTT** to push telemetry data that mimics the behavior of the real wearable.
+
+### ⚙️ Prerequisites
+The project uses **Poetry** for dependency management. Ensure you have the virtual environment set up:
+```bash
+# Install dependencies
+poetry install
+```
+
+### 📡 Running the Simulator
+1.  **Configure environment**: Create or edit `simulator/.env` to set your MQTT broker details and simulation flags.
+    *   `SIMULATE_HEAT_STRESS=true`: Triggers abnormal physiological readings.
+    *   `SIMULATE_FALL=true`: Triggers a fall detection alert.
+2.  **Start the Simulator**:
+    ```bash
+    poetry run python simulator/simulator.py
+    ```
+3.  **Verify Data (Optional)**: If you don't have a backend ready, you can run the receiver to see incoming messages:
+    ```bash
+    poetry run python simulator/receiver.py
+    ```
+
+### 📊 Simulation Logic
+The simulator implements the same edge-computing logic as the firmware:
+- **WBGT Proxy**: Calculated using Stull's formula from ambient temperature and humidity.
+- **Risk Assessment**: Logic-based scoring (0-3) derived from physiological and environmental stressors.
