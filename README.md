@@ -105,3 +105,35 @@ poetry install
 The simulator implements the same edge-computing logic as the firmware:
 - **WBGT Proxy**: Calculated using Stull's formula from ambient temperature and humidity.
 - **Risk Assessment**: Logic-based scoring (0-3) derived from physiological and environmental stressors.
+
+---
+
+## 🏛 Backend Setup (ThingsBoard)
+
+The system uses **ThingsBoard Community Edition** as the central IoT gateway and dashboard. It is containerized using Docker for easy deployment.
+
+### 🚀 Starting ThingsBoard
+1.  **Navigate to the backend directory**:
+    ```bash
+    cd backend
+    ```
+2.  **Start the container**:
+    ```bash
+    docker-compose up -d
+    ```
+3.  **Access the Dashboard**:
+    *   URL: `http://localhost:9090`
+    *   Default Credentials:
+        *   System Admin: `sysadmin@thingsboard.org` / `sysadmin`
+        *   Tenant Admin: `tenant@thingsboard.org` / `tenant`
+        *   Customer User: `customer@thingsboard.org` / `customer`
+
+### 🎨 Custom Pages & Dashboards
+ThingsBoard allows for deep customization:
+- **Dashboards**: Use the built-in drag-and-drop editor to create real-time monitoring views.
+- **Custom Widgets**: For unique aesthetic or functional requirements, you can develop widgets using HTML5, CSS3, and JavaScript directly within the ThingsBoard "Widget Library".
+- **External Integration**: If a completely separate web application is needed, you can consume data via the ThingsBoard [Websocket API](https://thingsboard.io/docs/user-guide/telemetry/#websocket-api) or REST API.
+
+---
+
+## 📂 Project Structure
