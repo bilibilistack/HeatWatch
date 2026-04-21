@@ -1,0 +1,19 @@
+version: '3.0'
+services:
+  mytb:
+    image: "thingsboard/tb-postgres"
+    container_name: mytb
+    ports:
+      - "9090:9090"
+      - "1883:1883"
+      - "7070:7070"
+      - "5683:5683/udp"
+    environment:
+      TB_QUEUE_TYPE: in-memory
+    volumes:
+      - ./thingsboard-data:/data
+      - ./thingsboard-logs:/var/log/thingsboard
+    restart: always
+
+# Note: For production or complex setups, separate PostgreSQL and Kafka containers are recommended.
+# This monolithic image is ideal for development and prototyping.
