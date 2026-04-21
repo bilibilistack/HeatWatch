@@ -1,0 +1,1 @@
+Please edge devices code (ESP32 etc.) in this folder.
