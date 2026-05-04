@@ -26,27 +26,27 @@
     "firmwareId" : null,
     "id" : {
       "entityType" : "DEVICE",
-      "id" : "793ee760-46d5-11f1-b7a8-75be0d5c4df2"
+      "id" : "a826bf30-47cf-11f1-9234-b7886a2047b6"
     },
     "label" : "",
-    "name" : "HeatWatch Simulator",
+    "name" : "TTGO",
     "ownerId" : null,
     "softwareId" : null,
     "type" : "default"
   },
   "credentials" : {
-    "credentialsId" : "azhswcapp3p8fa1lz9yl",
+    "credentialsId" : "2z1nuwgd3xbul4qrk98t",
     "credentialsType" : "ACCESS_TOKEN",
     "credentialsValue" : null
   },
   "relations" : [ ],
   "attributes" : {
     "SERVER_SCOPE" : [ {
-      "booleanValue" : true,
+      "booleanValue" : false,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "active",
-      "lastUpdateTs" : 1777860820358,
+      "lastUpdateTs" : 1777909877686,
       "longValue" : null,
       "strValue" : null
     }, {
@@ -54,32 +54,8 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "inactivityAlarmTime",
-      "lastUpdateTs" : 1777825529630,
-      "longValue" : 1777825529628,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastActivityTime",
-      "lastUpdateTs" : 1777910729052,
-      "longValue" : 1777910727470,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastConnectTime",
-      "lastUpdateTs" : 1777860820357,
-      "longValue" : 1777860820357,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastDisconnectTime",
-      "lastUpdateTs" : 1777824923359,
-      "longValue" : 1777824923359,
+      "lastUpdateTs" : 1777909877678,
+      "longValue" : 1777909877676,
       "strValue" : null
     } ],
     "SHARED_SCOPE" : [ ]
