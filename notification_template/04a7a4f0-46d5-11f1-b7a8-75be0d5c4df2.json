@@ -1,0 +1,39 @@
+{
+  "entityType" : "NOTIFICATION_TEMPLATE",
+  "entity" : {
+    "configuration" : {
+      "attachReport" : false,
+      "deliveryMethodsTemplates" : {
+        "WEB" : {
+          "method" : "WEB",
+          "additionalConfig" : {
+            "icon" : {
+              "enabled" : true,
+              "icon" : "info",
+              "color" : "#757575"
+            },
+            "actionButtonConfig" : {
+              "enabled" : true,
+              "text" : "Go to ${entityType:lowerCase}",
+              "linkType" : "LINK",
+              "link" : "/${entityType:lowerCase}s/${entityId}"
+            }
+          },
+          "body" : "${entityType} '${entityName}' was ${actionType} by user ${userEmail}",
+          "enabled" : true,
+          "subject" : "${entityType} was ${actionType}"
+        }
+      },
+      "reportTemplateId" : null,
+      "timezone" : null,
+      "userId" : null
+    },
+    "externalId" : null,
+    "id" : {
+      "entityType" : "NOTIFICATION_TEMPLATE",
+      "id" : "04a7a4f0-46d5-11f1-b7a8-75be0d5c4df2"
+    },
+    "name" : "Entity action notification",
+    "notificationType" : "ENTITY_ACTION"
+  }
+}

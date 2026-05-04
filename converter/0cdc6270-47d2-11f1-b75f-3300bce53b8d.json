@@ -1,0 +1,44 @@
+{
+  "entityType" : "CONVERTER",
+  "entity" : {
+    "additionalInfo" : {
+      "description" : ""
+    },
+    "configuration" : {
+      "scriptLang" : "TBEL",
+      "decoder" : null,
+      "tbelDecoder" : "/**\n * Decodes the incoming payload and returns a structured object containing telemetry data and attributes.\n *\n * @param {byte[]} input - The raw payload received as an array of bytes.\n * @returns {Object} output - The structured output with decoded telemetry and attributes.\n */\n\nfunction decodePayload(input) {\n    // Initialize the output object with empty attributes and telemetry for clarity.\n    var result = { attributes: {}, telemetry: {}};\n\n    // Detect input type and normalize to byte array\n    var bytes;\n\n    if (metadata.payloadFormat == 'JSON') {\n        // payloadFormat is 'JSON' when The Things Network payload formatters are configured on the application or device level.\n        // In that case, decoded_payload is a JSON object produced by your formatter.\n        // This template assumes the formatter returns { \"bytes\": [...] } with the raw byte array.\n        // If your formatter returns pre-decoded values in a different structure,\n        // update this section to extract the values directly from 'parsed' instead.\n        var parsed = decodeToJson(input);\n        if (parsed.bytes == null) {\n            throw new Error(\"Payload formatter output does not contain a 'bytes' field. \" +\n                \"Update this decoder to match your formatter's output structure.\");\n        }\n        bytes = parsed.bytes;\n    } else {\n        // payloadFormat is 'BINARY' when no payload formatter is configured — raw bytes from frm_payload are passed directly.\n        bytes = input;\n    }\n\n    // Decode serial number (SN) from the first 4 bytes of the payload.\n    // Press '?' icon in the top right corner to learn more about built in helper functions and capabilities.\n    result.attributes.sn = parseBytesToInt(bytes, 0, 4);\n\n    // Extract the timestamp from metadata (represented in milliseconds).\n    var timestamp = metadata.ts; // ts is the timestamp parsed from the incoming message's time, or returns the current time if it cannot be parsed.\n\n    // Combine the timestamp with decoded values and add it to the telemetry.\n    result.telemetry = {\n        ts: timestamp,\n        values: {\n            // Decode battery level from the 5th byte of the payload.\n            battery: parseBytesToInt(bytes, 4, 1),\n            // Decode temperature from the 6th and 7th bytes of the payload (divided by 100).\n            temperature: parseBytesToInt(bytes, 5, 2) / 100.0,\n            // Decode saturation from the 8th byte of the payload.\n            saturation: parseBytesToInt(bytes, 7, 1)\n        }\n    };\n\n    // Return the fully constructed output object.\n    return result;\n    // Same logic, less code:\n    // return {\n    //     attributes: {\n    //         sn: parseBytesToInt(bytes, 0, 4)\n    //     },\n    //     telemetry: {\n    //         ts: convertDateToTimestamp(extractDateFromMetadata()),\n    //         values: {\n    //             battery: parseBytesToInt(bytes, 4, 1),\n    //             temperature: parseBytesToInt(bytes, 5, 2) / 100.0,\n    //             saturation: parseBytesToInt(bytes, 7, 1)\n    //         }\n    //     }\n    // };\n}\n\nvar result = decodePayload(payload);\n// Uncomment this code block to overwrite values set in the main configuration window. Useful if you extract device/asset/customer/group names from the payload;\n// result.type = 'DEVICE'; // Entity type allows you to choose type of created entity. Can be 'DEVICE' or 'ASSET'.\n// result.name = 'Temperature Sensor'; // Device or asset name (the value must be unique)\n// result.profile = 'IndustrialSensorProfile'; // Device or asset profile name.\n// result.customer = 'MyCustomer'; // If customer is not null - created entity will be assigned to customer with such name.\n// result.group = 'SensorsGroup'; // If group is not null - created entity will be added to the entity group with such name.\n\n// Return the final result object.\nreturn result;",
+      "encoder" : null,
+      "tbelEncoder" : null,
+      "updateOnlyKeys" : [ "eui", "devAddr", "fPort", "bandwidth", "spreadingFactor", "codeRate", "frequency", "brandId", "modelId", "hardwareVersion", "firmwareVersion", "attributes", "tenantId" ],
+      "type" : "DEVICE",
+      "name" : "Device $eui",
+      "profile" : "$applicationId",
+      "label" : "$deviceId",
+      "customer" : "",
+      "group" : "",
+      "telemetry" : [ "fCnt", "data", "decoded", "latitude", "longitude", "altitude", "rssi", "snr", "channel" ],
+      "attributes" : [ "eui", "devAddr", "fPort", "bandwidth", "spreadingFactor", "codeRate", "frequency", "brandId", "modelId", "hardwareVersion", "firmwareVersion", "attributes", "tenantId" ]
+    },
+    "converterVersion" : 2,
+    "debugMode" : false,
+    "debugSettings" : {
+      "allEnabled" : false,
+      "allEnabledUntil" : 1777911190966,
+      "failuresEnabled" : true
+    },
+    "edgeTemplate" : false,
+    "externalId" : null,
+    "id" : {
+      "entityType" : "CONVERTER",
+      "id" : "0cdc6270-47d2-11f1-b75f-3300bce53b8d"
+    },
+    "integrationType" : "TTN",
+    "name" : "Uplink data converter for The Things Stack Community integration",
+    "type" : "UPLINK"
+  },
+  "relations" : [ ],
+  "attributes" : {
+    "SERVER_SCOPE" : [ ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "entityType" : "INTEGRATION",
+  "entity" : {
+    "additionalInfo" : null,
+    "allowCreateDevicesOrAssets" : true,
+    "configuration" : {
+      "metadata" : { },
+      "clientConfiguration" : {
+        "host" : "au1.cloud.thethings.network",
+        "customHost" : false,
+        "port" : 8883,
+        "ssl" : true,
+        "maxBytesInMessage" : 32368,
+        "connectTimeoutSec" : 10,
+        "protocolVersion" : "MQTT_3_1_1",
+        "credentials" : {
+          "type" : "basic",
+          "username" : "heatstress-group10@ttn",
+          "password" : "NNSXS.IPCZABO6TCZQE3PT7AXOHIHMVYTSWPLHUYSY2TY.WTCTQXV2RXYMGOOYWUSUQMAGXXRBZBQD5JFSO4STNO7QVDYLD6KA"
+        }
+      },
+      "topicFilters" : [ {
+        "filter" : "v3/+/devices/+/up",
+        "qos" : 0
+      } ],
+      "downlinkTopicPattern" : "v3/heatstress-group10@ttn/devices/${devId}/down/push"
+    },
+    "debugMode" : false,
+    "debugSettings" : {
+      "allEnabled" : false,
+      "allEnabledUntil" : 1777911191268,
+      "failuresEnabled" : true
+    },
+    "defaultConverterId" : {
+      "entityType" : "CONVERTER",
+      "id" : "0cdc6270-47d2-11f1-b75f-3300bce53b8d"
+    },
+    "downlinkConverterId" : null,
+    "edgeTemplate" : false,
+    "enabled" : true,
+    "externalId" : null,
+    "id" : {
+      "entityType" : "INTEGRATION",
+      "id" : "0d0a5040-47d2-11f1-b75f-3300bce53b8d"
+    },
+    "name" : "The Things Stack Community integration",
+    "remote" : false,
+    "routingKey" : "f8e39a35-cf97-44b4-c8cd-98fa75c3861f",
+    "secret" : "32ybs2cizssv032uux6v",
+    "type" : "TTN"
+  },
+  "relations" : [ ],
+  "attributes" : {
+    "SERVER_SCOPE" : [ {
+      "booleanValue" : null,
+      "doubleValue" : null,
+      "jsonValue" : "{\"success\":true}",
+      "key" : "integration_status_tb-ie-main-1",
+      "lastUpdateTs" : 1777910292213,
+      "longValue" : null,
+      "strValue" : null
+    } ]
+  }
+}
