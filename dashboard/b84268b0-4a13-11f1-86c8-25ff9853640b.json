@@ -1,7 +1,7 @@
 {
   "entityType" : "DASHBOARD",
   "entity" : {
-    "title" : "Simulator",
+    "title" : "ttgo",
     "image" : null,
     "mobileHide" : false,
     "mobileOrder" : null,
@@ -1163,14 +1163,14 @@
         "toolbarAlwaysOpen" : true
       }
     },
-    "name" : "Simulator",
+    "name" : "ttgo",
     "resources" : null,
     "assignedCustomers" : null,
     "customerId" : null,
     "externalId" : null,
     "id" : {
       "entityType" : "DASHBOARD",
-      "id" : "23a26990-46d9-11f1-b25a-9b1cf0871243"
+      "id" : "b84268b0-4a13-11f1-86c8-25ff9853640b"
     },
     "ownerId" : null
   },

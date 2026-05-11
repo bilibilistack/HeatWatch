@@ -8,7 +8,7 @@
     },
     "customerId" : {
       "entityType" : "CUSTOMER",
-      "id" : "13814000-1dd2-11b2-8080-808080808080"
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
     },
     "deviceData" : {
       "configuration" : {
@@ -26,16 +26,19 @@
     "firmwareId" : null,
     "id" : {
       "entityType" : "DEVICE",
-      "id" : "793ee760-46d5-11f1-b7a8-75be0d5c4df2"
+      "id" : "89d6fee0-4c71-11f1-8db5-c3197a5d8b3d"
     },
-    "label" : "",
-    "name" : "HeatWatch Simulator",
-    "ownerId" : null,
+    "label" : "Mining A-01",
+    "name" : "Mining A-01",
+    "ownerId" : {
+      "entityType" : "CUSTOMER",
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
+    },
     "softwareId" : null,
     "type" : "default"
   },
   "credentials" : {
-    "credentialsId" : "azhswcapp3p8fa1lz9yl",
+    "credentialsId" : "H2MsRYqHq3XsTwdfkXd5",
     "credentialsType" : "ACCESS_TOKEN",
     "credentialsValue" : null
   },
@@ -46,7 +49,7 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "active",
-      "lastUpdateTs" : 1778135822832,
+      "lastUpdateTs" : 1778419201991,
       "longValue" : null,
       "strValue" : null
     }, {
@@ -54,32 +57,8 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "inactivityAlarmTime",
-      "lastUpdateTs" : 1778135822823,
-      "longValue" : 1778135822822,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastActivityTime",
-      "lastUpdateTs" : 1778135198355,
-      "longValue" : 1778135196554,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastConnectTime",
-      "lastUpdateTs" : 1778129158261,
-      "longValue" : 1778129158261,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastDisconnectTime",
-      "lastUpdateTs" : 1778135196560,
-      "longValue" : 1778135196560,
+      "lastUpdateTs" : 1778419201988,
+      "longValue" : 1778419201987,
       "strValue" : null
     } ],
     "SHARED_SCOPE" : [ ]
