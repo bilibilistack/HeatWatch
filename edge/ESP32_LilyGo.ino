@@ -6,10 +6,11 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <math.h>
+#include <axp20x.h> // new AXP192 power management library
 
 // ======================================================
 // HeatWatch ESP32 / T-Beam Firmware
-// BME280 + LIS3DH + LoRaWAN ABP
+// BME280 + LIS3DH + LoRaWAN ABP + AXP192 Power Management
 //
 // Improvements:
 // 1. 8-byte binary LoRaWAN payload
@@ -17,6 +18,7 @@
 // 3. Allows post-fall struggle before final stillness
 // 4. USB demo battery mode
 // 5. Optional LED alarm
+// 6. [NEW] AXP192 Integration & GPS Power Down
 // ======================================================
 
 
@@ -43,16 +45,9 @@ static const u4_t DEVADDR = 0x260D9A3E;
 
 // ---------- Demo battery mode ----------
 // 1 = USB demo mode: usb_power=1, battery=100%, vbat=4.20V
-// 0 = try ADC battery reading
-#define DEMO_USB_POWER_ALWAYS_100 1
-
-
-// ---------- ADC battery fallback ----------
-// Only works if your T-Beam version exposes battery voltage to this ADC pin.
-static const int   VBAT_PIN       = 35;
-static const float VBAT_DIVIDER   = 2.0f;
-static const float ADC_CAL_GAIN   = 1.000f;
-static const int   ADC_SAMPLES    = 16;
+// 0 = try AXP192 real battery reading
+// 【建议：如果要看真实耗电量，请改为 0】
+#define DEMO_USB_POWER_ALWAYS_100 0
 
 
 // ---------- LED alarm ----------
@@ -147,9 +142,11 @@ const lmic_pinmap lmic_pins = {
 
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 Adafruit_BME280 bme;
+AXP20X_Class axp; // Initialize the object AXP
 
 bool lis_ok = false;
 bool bme_ok = false;
+bool axp_ok = false; // Flag for AXP initialize
 
 
 // ================= FALL DETECTION PARAMETERS =================
@@ -167,19 +164,15 @@ const float STILL_UPPER_G            = 1.15f;
 const float STILL_DELTA_G            = 0.08f;
 
 // New struggle-friendly confirmation logic.
-// After impact, the user may still move or struggle.
-// We allow a short grace period, then look for later sustained stillness.
-const unsigned long CONFIRM_DURATION_MS = 8000;  // max observation window
-const unsigned long STRUGGLE_GRACE_MS   = 2500;  // ignore early struggling
-const unsigned long FINAL_STILL_MS      = 1200;  // final quiet tail
-const unsigned long MAX_STILL_MS        = 1500;  // any continuous still period
-const float STILL_RATIO_REQUIRED        = 0.30f; // relaxed for struggle cases
+const unsigned long CONFIRM_DURATION_MS = 8000;  
+const unsigned long STRUGGLE_GRACE_MS   = 2500;  
+const unsigned long FINAL_STILL_MS      = 1200;  
+const unsigned long MAX_STILL_MS        = 1500;  
+const float STILL_RATIO_REQUIRED        = 0.30f; 
 
-// Posture is useful but not required for demo.
 const float POSTURE_CHANGE_DEG          = 8.0f;
 const bool REQUIRE_POSTURE_CHANGE       = false;
 
-// Very strong impact can compensate for weak posture change.
 const float VERY_STRONG_IMPACT_G        = 5.0f;
 
 const unsigned long ALARM_DURATION_MS   = 5000;
@@ -199,69 +192,41 @@ static uint8_t payloadText[96];
 
 
 // ================= FALL STATE VARIABLES =================
-
 FallState fallState = STATE_IDLE;
-
 unsigned long stateEnterTime = 0;
 unsigned long lastSampleTime = 0;
-
 unsigned int confirmTotalSamples = 0;
 unsigned int confirmStillSamples = 0;
 unsigned long lastNonStillTime = 0;
-
-// New continuous-still tracking.
 unsigned long currentStillStart = 0;
 unsigned long maxStillDuration = 0;
 bool wasStill = false;
-
-float lastAx = 0;
-float lastAy = 0;
-float lastAz = 0;
-float lastSvmG = 0;
-float prevSvmG = 1.0f;
-float lastDeltaG = 0;
+float lastAx = 0, lastAy = 0, lastAz = 0;
+float lastSvmG = 0, prevSvmG = 1.0f, lastDeltaG = 0;
 bool hasPrevSvm = false;
-
 unsigned long fallCount = 0;
 bool pendingFallAlert = false;
-
 bool baselineReady = false;
-float baseAx = 0;
-float baseAy = 0;
-float baseAz = G;
-
-float postAxSum = 0;
-float postAySum = 0;
-float postAzSum = 0;
+float baseAx = 0, baseAy = 0, baseAz = G;
+float postAxSum = 0, postAySum = 0, postAzSum = 0;
 unsigned int postOrientationSamples = 0;
-
 float impactSvmG = 0;
 bool impactHadRecentLowG = false;
 unsigned long lastLowGTime = 0;
-
 uint8_t latestRisk = 0;
 bool latestFallAlarm = false;
 
-
 // ================= BATTERY VARIABLES =================
-
 static float battEma = NAN;
 static const float BATT_EMA_ALPHA = 0.15f;
 
-
 // ================= HEAT STRESS FUNCTIONS =================
-
 float calcStullWetBulb(float T, float RH) {
-  return T * atan(0.151977f * sqrt(RH + 8.313659f))
-       + atan(T + RH)
-       - atan(RH - 1.676331f)
-       + 0.00391838f * pow(RH, 1.5f) * atan(0.023101f * RH)
-       - 4.686035f;
+  return T * atan(0.151977f * sqrt(RH + 8.313659f)) + atan(T + RH) - atan(RH - 1.676331f) + 0.00391838f * pow(RH, 1.5f) * atan(0.023101f * RH) - 4.686035f;
 }
 
 float calcWBGT(float T, float RH) {
-  float Tw = calcStullWetBulb(T, RH);
-  return 0.7f * Tw + 0.3f * T;
+  return 0.7f * calcStullWetBulb(T, RH) + 0.3f * T;
 }
 
 uint8_t hsiRiskLevel(float wbgt) {
@@ -272,28 +237,37 @@ uint8_t hsiRiskLevel(float wbgt) {
 }
 
 
-// ================= BATTERY FUNCTIONS =================
+// ================= BATTERY / POWER FUNCTIONS (MODIFIED) =================
 
 void batteryBegin() {
-  analogReadResolution(12);
-  analogSetPinAttenuation(VBAT_PIN, ADC_11db);
+  // Initialize AXP192
+  int ret = axp.begin(Wire, AXP192_SLAVE_ADDRESS);
+  if (ret == AXP_FAIL) {
+    Serial.println("AXP192 Initialization FAILED!");
+    axp_ok = false;
+  } else {
+    Serial.println("AXP192 Initialization OK!");
+    axp_ok = true;
+    
+    // Enable ADC sampling
+    axp.adc1Enable(AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1 | AXP202_BATT_V_ADC1 | AXP202_BATT_CUR_ADC1, true);
+
+    // Turn off GPS to save power
+    axp.setPowerOutPut(AXP192_LDO3, false);
+    Serial.println(">>> GPS Power (LDO3) is turned OFF for power saving.");
+
+    // Make sure the power of LoRA is on
+    axp.setPowerOutPut(AXP192_LDO2, true);
+    Serial.println(">>> LoRa Power (LDO2) is enabled.");
+  }
 }
 
 float readBatteryVoltageAdc() {
 #if DEMO_USB_POWER_ALWAYS_100
   return 4.20f;
 #else
-  uint32_t sumMv = 0;
-
-  for (int i = 0; i < ADC_SAMPLES; i++) {
-    sumMv += analogReadMilliVolts(VBAT_PIN);
-    delayMicroseconds(200);
-  }
-
-  float pinMv = (float)sumMv / (float)ADC_SAMPLES;
-  float battMv = pinMv * VBAT_DIVIDER * ADC_CAL_GAIN;
-
-  return battMv / 1000.0f;
+  if (!axp_ok) return 0.0f;
+  return axp.getBattVoltage() / 1000.0f; // AXP read mV and convert to voltage
 #endif
 }
 
@@ -306,28 +280,15 @@ uint8_t liionPctFromVoltage(float v) {
   if (v >= 4.20f) return 100;
   if (v <= 3.30f) return 0;
 
-  if (v >= 3.95f) {
-    return (uint8_t)roundf(linearMapFloat(v, 3.95f, 4.20f, 80.0f, 100.0f));
-  }
-
-  if (v >= 3.80f) {
-    return (uint8_t)roundf(linearMapFloat(v, 3.80f, 3.95f, 20.0f, 80.0f));
-  }
-
-  if (v >= 3.60f) {
-    return (uint8_t)roundf(linearMapFloat(v, 3.60f, 3.80f, 5.0f, 20.0f));
-  }
-
+  if (v >= 3.95f) return (uint8_t)roundf(linearMapFloat(v, 3.95f, 4.20f, 80.0f, 100.0f));
+  if (v >= 3.80f) return (uint8_t)roundf(linearMapFloat(v, 3.80f, 3.95f, 20.0f, 80.0f));
+  if (v >= 3.60f) return (uint8_t)roundf(linearMapFloat(v, 3.60f, 3.80f, 5.0f, 20.0f));
   return (uint8_t)roundf(linearMapFloat(v, 3.30f, 3.60f, 0.0f, 5.0f));
 }
 
 float smoothBatteryVoltage(float sampleV) {
-  if (isnan(battEma)) {
-    battEma = sampleV;
-  } else {
-    battEma = battEma + BATT_EMA_ALPHA * (sampleV - battEma);
-  }
-
+  if (isnan(battEma)) battEma = sampleV;
+  else battEma = battEma + BATT_EMA_ALPHA * (sampleV - battEma);
   return battEma;
 }
 
@@ -335,36 +296,21 @@ bool readUsbPower() {
 #if DEMO_USB_POWER_ALWAYS_100
   return true;
 #else
-  return false;
+  if (!axp_ok) return false;
+  return axp.isVBUSPlug();
 #endif
 }
 
 uint8_t readBatteryPercent() {
   bool usbPower = readUsbPower();
-
   float vbat = readBatteryVoltageAdc();
   float smoothV = smoothBatteryVoltage(vbat);
-
   uint8_t engineeringPct = liionPctFromVoltage(smoothV);
 
   if (usbPower) return 100;
-
   return engineeringPct;
 }
 
-
-// ================= 8-BYTE BINARY PAYLOAD =================
-//
-// Byte0-1: temp_x10, int16 big-endian
-// Byte2:   humidity_x2, uint8
-// Byte3-4: wbgt_x10, int16 big-endian
-// Byte5:   risk / HSI
-// Byte6:   battery percentage
-// Byte7:   flags
-//          bit0 = fall
-//          bit1 = usb_power
-//          bit2 = active_signal
-//          bit5..7 = protocol version
 
 static inline int16_t clampI16(long v) {
   if (v > 32767) return 32767;
@@ -372,21 +318,11 @@ static inline int16_t clampI16(long v) {
   return (int16_t)v;
 }
 
-uint8_t packPayload8(uint8_t out[8],
-                     float tempC,
-                     float humPct,
-                     float wbgtC,
-                     uint8_t risk,
-                     uint8_t batteryPct,
-                     bool fall,
-                     bool usbPower,
-                     bool activeSignal) {
+uint8_t packPayload8(uint8_t out[8], float tempC, float humPct, float wbgtC, uint8_t risk, uint8_t batteryPct, bool fall, bool usbPower, bool activeSignal) {
   int16_t temp_x10 = clampI16(lroundf(tempC * 10.0f));
   uint8_t hum_x2   = (uint8_t)constrain((int)lroundf(humPct * 2.0f), 0, 200);
   int16_t wbgt_x10 = clampI16(lroundf(wbgtC * 10.0f));
-
   const uint8_t protoVer = 1;
-
   uint8_t flags = 0;
   flags |= (fall ? 1u : 0u) << 0;
   flags |= (usbPower ? 1u : 0u) << 1;
@@ -401,7 +337,6 @@ uint8_t packPayload8(uint8_t out[8],
   out[5] = risk;
   out[6] = batteryPct;
   out[7] = flags;
-
   return 8;
 }
 
@@ -414,57 +349,27 @@ void printPayloadHex(const uint8_t* data, uint8_t len) {
   Serial.println();
 }
 
-
-// ================= FALL DETECTION =================
-
 void enterState(FallState s) {
   fallState = s;
   stateEnterTime = millis();
-
   if (s == STATE_CONFIRMING) {
-    confirmTotalSamples = 0;
-    confirmStillSamples = 0;
-    lastNonStillTime = millis();
-
-    currentStillStart = 0;
-    maxStillDuration = 0;
-    wasStill = false;
-
-    postAxSum = 0;
-    postAySum = 0;
-    postAzSum = 0;
-    postOrientationSamples = 0;
+    confirmTotalSamples = 0; confirmStillSamples = 0; lastNonStillTime = millis();
+    currentStillStart = 0; maxStillDuration = 0; wasStill = false;
+    postAxSum = 0; postAySum = 0; postAzSum = 0; postOrientationSamples = 0;
   }
-
-  if (s == STATE_FALL_DETECTED) {
-    latestFallAlarm = true;
-  }
-
-  if (s == STATE_IDLE) {
-    latestFallAlarm = false;
-  }
+  if (s == STATE_FALL_DETECTED) latestFallAlarm = true;
+  if (s == STATE_IDLE) latestFallAlarm = false;
 }
 
 void readAccel() {
   if (!lis_ok) return;
-
   sensors_event_t e;
   lis.getEvent(&e);
-
-  lastAx = e.acceleration.x;
-  lastAy = e.acceleration.y;
-  lastAz = e.acceleration.z;
-
+  lastAx = e.acceleration.x; lastAy = e.acceleration.y; lastAz = e.acceleration.z;
   float mag = sqrt(lastAx * lastAx + lastAy * lastAy + lastAz * lastAz);
   lastSvmG = mag / G;
-
-  if (hasPrevSvm) {
-    lastDeltaG = fabs(lastSvmG - prevSvmG);
-  } else {
-    lastDeltaG = 0;
-    hasPrevSvm = true;
-  }
-
+  if (hasPrevSvm) lastDeltaG = fabs(lastSvmG - prevSvmG);
+  else { lastDeltaG = 0; hasPrevSvm = true; }
   prevSvmG = lastSvmG;
 }
 
@@ -476,20 +381,10 @@ bool isLowMotionNow() {
 
 void updateBaselineOrientation() {
   if (!lis_ok) return;
-
   if (!baselineReady) {
-    baseAx = lastAx;
-    baseAy = lastAy;
-    baseAz = lastAz;
-    baselineReady = true;
-    return;
+    baseAx = lastAx; baseAy = lastAy; baseAz = lastAz; baselineReady = true; return;
   }
-
-  bool safeToUpdate =
-    (lastSvmG >= STILL_LOWER_G) &&
-    (lastSvmG <= STILL_UPPER_G) &&
-    (lastSvmG < IMPACT_THRESHOLD_G);
-
+  bool safeToUpdate = (lastSvmG >= STILL_LOWER_G) && (lastSvmG <= STILL_UPPER_G) && (lastSvmG < IMPACT_THRESHOLD_G);
   if (safeToUpdate) {
     const float alpha = 0.03f;
     baseAx = (1.0f - alpha) * baseAx + alpha * lastAx;
@@ -498,19 +393,14 @@ void updateBaselineOrientation() {
   }
 }
 
-float angleBetweenVectors(float ax1, float ay1, float az1,
-                          float ax2, float ay2, float az2) {
+float angleBetweenVectors(float ax1, float ay1, float az1, float ax2, float ay2, float az2) {
   float dot = ax1 * ax2 + ay1 * ay2 + az1 * az2;
   float n1 = sqrt(ax1 * ax1 + ay1 * ay1 + az1 * az1);
   float n2 = sqrt(ax2 * ax2 + ay2 * ay2 + az2 * az2);
-
   if (n1 <= 0.0001f || n2 <= 0.0001f) return 0;
-
   float c = dot / (n1 * n2);
-
   if (c > 1.0f) c = 1.0f;
   if (c < -1.0f) c = -1.0f;
-
   return acos(c) * 180.0f / PI;
 }
 
@@ -519,310 +409,125 @@ void triggerImmediateSend() {
   os_setCallback(&sendjob, do_send);
 }
 
-void printFallDecision(float stillRatio,
-                       unsigned long quietTail,
-                       float postureChangeDeg,
-                       bool ratioOK,
-                       bool tailOK,
-                       bool maxStillOK,
-                       bool postureOK,
-                       bool impactStrong,
-                       bool evidenceOK,
-                       bool afterGrace,
-                       bool confirmed) {
-  Serial.println();
-  Serial.println("---- Fall confirmation result ----");
-
-  Serial.print("Impact SVM: ");
-  Serial.print(impactSvmG, 2);
-  Serial.println(" g");
-
-  Serial.print("Recent low-g: ");
-  Serial.println(impactHadRecentLowG ? 1 : 0);
-
-  Serial.print("Still ratio: ");
-  Serial.println(stillRatio, 2);
-
-  Serial.print("Quiet tail: ");
-  Serial.print(quietTail);
-  Serial.println(" ms");
-
-  Serial.print("Max still duration: ");
-  Serial.print(maxStillDuration);
-  Serial.println(" ms");
-
-  Serial.print("Posture change: ");
-  Serial.print(postureChangeDeg, 1);
-  Serial.println(" deg");
-
-  Serial.print("afterGrace=");
-  Serial.print(afterGrace);
-  Serial.print(" ratioOK=");
-  Serial.print(ratioOK);
-  Serial.print(" tailOK=");
-  Serial.print(tailOK);
-  Serial.print(" maxStillOK=");
-  Serial.print(maxStillOK);
-  Serial.print(" postureOK=");
-  Serial.print(postureOK);
-  Serial.print(" impactStrong=");
-  Serial.print(impactStrong);
-  Serial.print(" evidenceOK=");
-  Serial.print(evidenceOK);
-  Serial.print(" confirmed=");
-  Serial.println(confirmed);
-
+void printFallDecision(float stillRatio, unsigned long quietTail, float postureChangeDeg, bool ratioOK, bool tailOK, bool maxStillOK, bool postureOK, bool impactStrong, bool evidenceOK, bool afterGrace, bool confirmed) {
+  Serial.println("\n---- Fall confirmation result ----");
+  Serial.printf("Impact SVM: %.2f g\n", impactSvmG);
+  Serial.printf("Recent low-g: %d\n", impactHadRecentLowG ? 1 : 0);
+  Serial.printf("Still ratio: %.2f\n", stillRatio);
+  Serial.printf("Quiet tail: %lu ms\n", quietTail);
+  Serial.printf("Max still duration: %lu ms\n", maxStillDuration);
+  Serial.printf("Posture change: %.1f deg\n", postureChangeDeg);
+  Serial.printf("afterGrace=%d ratioOK=%d tailOK=%d maxStillOK=%d postureOK=%d impactStrong=%d evidenceOK=%d confirmed=%d\n", afterGrace, ratioOK, tailOK, maxStillOK, postureOK, impactStrong, evidenceOK, confirmed);
   Serial.println("----------------------------------");
 }
 
 void updateFallStateMachine() {
   if (!lis_ok) return;
-
   unsigned long now = millis();
-
-  if (lastSvmG < FREEFALL_THRESHOLD_G) {
-    lastLowGTime = now;
-  }
-
+  if (lastSvmG < FREEFALL_THRESHOLD_G) lastLowGTime = now;
   bool lowMotion = isLowMotionNow();
 
   switch (fallState) {
     case STATE_IDLE: {
       updateBaselineOrientation();
-
       if (lastSvmG > IMPACT_THRESHOLD_G) {
         impactSvmG = lastSvmG;
         impactHadRecentLowG = (now - lastLowGTime <= LOWG_WINDOW_MS);
-
-        Serial.println();
-        Serial.print("!!! IMPACT detected. SVM = ");
-        Serial.print(lastSvmG, 2);
-        Serial.print(" g");
-
-        if (impactHadRecentLowG) {
-          Serial.print(" | recent low-g detected");
-        } else {
-          Serial.print(" | no recent low-g");
-        }
-
-        Serial.println();
+        Serial.printf("\n!!! IMPACT detected. SVM = %.2f g | %s\n", lastSvmG, impactHadRecentLowG ? "recent low-g detected" : "no recent low-g");
         enterState(STATE_CONFIRMING);
       }
-
       break;
     }
-
     case STATE_CONFIRMING: {
       confirmTotalSamples++;
-
       if (lowMotion) {
         confirmStillSamples++;
-
-        if (!wasStill) {
-          currentStillStart = now;
-          wasStill = true;
-        }
-
+        if (!wasStill) { currentStillStart = now; wasStill = true; }
         unsigned long currentStillDuration = now - currentStillStart;
-
-        if (currentStillDuration > maxStillDuration) {
-          maxStillDuration = currentStillDuration;
-        }
-
-        postAxSum += lastAx;
-        postAySum += lastAy;
-        postAzSum += lastAz;
-        postOrientationSamples++;
+        if (currentStillDuration > maxStillDuration) maxStillDuration = currentStillDuration;
+        postAxSum += lastAx; postAySum += lastAy; postAzSum += lastAz; postOrientationSamples++;
       } else {
-        wasStill = false;
-        lastNonStillTime = now;
+        wasStill = false; lastNonStillTime = now;
       }
-
-      float stillRatio = 0.0f;
-
-      if (confirmTotalSamples > 0) {
-        stillRatio = (float)confirmStillSamples / (float)confirmTotalSamples;
-      }
-
+      float stillRatio = confirmTotalSamples > 0 ? (float)confirmStillSamples / confirmTotalSamples : 0;
       unsigned long quietTail = now - lastNonStillTime;
-
       float postureChangeDeg = 0.0f;
       bool postureOK = false;
-
       if (postOrientationSamples > 0) {
-        float postAx = postAxSum / postOrientationSamples;
-        float postAy = postAySum / postOrientationSamples;
-        float postAz = postAzSum / postOrientationSamples;
-
-        postureChangeDeg = angleBetweenVectors(
-          baseAx, baseAy, baseAz,
-          postAx, postAy, postAz
-        );
-
+        postureChangeDeg = angleBetweenVectors(baseAx, baseAy, baseAz, postAxSum/postOrientationSamples, postAySum/postOrientationSamples, postAzSum/postOrientationSamples);
         postureOK = (postureChangeDeg >= POSTURE_CHANGE_DEG);
       }
-
       bool afterGrace = (now - stateEnterTime >= STRUGGLE_GRACE_MS);
       bool ratioOK = (stillRatio >= STILL_RATIO_REQUIRED);
       bool tailOK = (quietTail >= FINAL_STILL_MS);
       bool maxStillOK = (maxStillDuration >= MAX_STILL_MS);
       bool impactStrong = (impactSvmG >= VERY_STRONG_IMPACT_G);
-
-      bool evidenceOK =
-        impactHadRecentLowG ||
-        postureOK ||
-        (impactStrong && stillRatio >= 0.20f);
-
-      if (REQUIRE_POSTURE_CHANGE) {
-        evidenceOK = evidenceOK && postureOK;
-      }
-
-      // Main struggle-friendly decision:
-      // A fall is confirmed when:
-      // 1. enough time has passed after impact,
-      // 2. fall evidence exists,
-      // 3. the device later becomes still for a sustained period.
-      bool stillEvidenceOK =
-        maxStillOK ||
-        (tailOK && ratioOK);
-
-      bool confirmed =
-        afterGrace &&
-        evidenceOK &&
-        stillEvidenceOK;
+      bool evidenceOK = impactHadRecentLowG || postureOK || (impactStrong && stillRatio >= 0.20f);
+      if (REQUIRE_POSTURE_CHANGE) evidenceOK = evidenceOK && postureOK;
+      
+      bool stillEvidenceOK = maxStillOK || (tailOK && ratioOK);
+      bool confirmed = afterGrace && evidenceOK && stillEvidenceOK;
 
       if (confirmed) {
-        printFallDecision(
-          stillRatio,
-          quietTail,
-          postureChangeDeg,
-          ratioOK,
-          tailOK,
-          maxStillOK,
-          postureOK,
-          impactStrong,
-          evidenceOK,
-          afterGrace,
-          confirmed
-        );
-
-        fallCount++;
-        pendingFallAlert = true;
-
-        Serial.println();
-        Serial.println("!!!! FALL DETECTED — sending emergency uplink !!!!");
-        Serial.println();
-
+        printFallDecision(stillRatio, quietTail, postureChangeDeg, ratioOK, tailOK, maxStillOK, postureOK, impactStrong, evidenceOK, afterGrace, confirmed);
+        fallCount++; pendingFallAlert = true;
+        Serial.println("\n!!!! FALL DETECTED — sending emergency uplink !!!!\n");
         enterState(STATE_FALL_DETECTED);
         triggerImmediateSend();
       } else if (now - stateEnterTime >= CONFIRM_DURATION_MS) {
-        printFallDecision(
-          stillRatio,
-          quietTail,
-          postureChangeDeg,
-          ratioOK,
-          tailOK,
-          maxStillOK,
-          postureOK,
-          impactStrong,
-          evidenceOK,
-          afterGrace,
-          confirmed
-        );
-
+        printFallDecision(stillRatio, quietTail, postureChangeDeg, ratioOK, tailOK, maxStillOK, postureOK, impactStrong, evidenceOK, afterGrace, confirmed);
         Serial.println("--> Not a real fall. Reset to IDLE.");
         enterState(STATE_IDLE);
       }
-
       break;
     }
-
     case STATE_FALL_DETECTED: {
-      if (now - stateEnterTime >= ALARM_DURATION_MS) {
-        enterState(STATE_IDLE);
-      }
-
+      if (now - stateEnterTime >= ALARM_DURATION_MS) enterState(STATE_IDLE);
       break;
     }
   }
 }
-
-
-// ================= LOCAL LED ALARM =================
 
 void updateLocalAlarm() {
 #if ENABLE_LED_ALARM
   static unsigned long lastBlink = 0;
   static bool ledState = false;
-
   unsigned long now = millis();
-
   bool alarmFast = latestFallAlarm;
   bool alarmSlow = (!alarmFast && latestRisk >= 2);
 
   if (!alarmFast && !alarmSlow) {
-#if LED_ACTIVE_HIGH
-    digitalWrite(LED_PIN, LOW);
-#else
-    digitalWrite(LED_PIN, HIGH);
-#endif
+    digitalWrite(LED_PIN, LED_ACTIVE_HIGH ? LOW : HIGH);
     ledState = false;
     return;
   }
-
   unsigned long interval = alarmFast ? 150 : 700;
-
   if (now - lastBlink >= interval) {
     lastBlink = now;
     ledState = !ledState;
-
-#if LED_ACTIVE_HIGH
-    digitalWrite(LED_PIN, ledState ? HIGH : LOW);
-#else
-    digitalWrite(LED_PIN, ledState ? LOW : HIGH);
-#endif
+    digitalWrite(LED_PIN, ledState ? (LED_ACTIVE_HIGH ? HIGH : LOW) : (LED_ACTIVE_HIGH ? LOW : HIGH));
   }
 #endif
 }
-
-
-// ================= LORA EVENTS =================
 
 void onEvent(ev_t ev) {
   Serial.print(os_getTime());
   Serial.print(": ");
-
   switch (ev) {
-    case EV_TXSTART:
-      Serial.println("EV_TXSTART");
-      break;
-
+    case EV_TXSTART: Serial.println("EV_TXSTART"); break;
     case EV_TXCOMPLETE:
       Serial.println("EV_TXCOMPLETE — packet sent");
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
       break;
-
-    case EV_JOINED:
-      Serial.println("EV_JOINED");
-      break;
-
-    case EV_JOIN_FAILED:
-      Serial.println("EV_JOIN_FAILED");
-      break;
-
-    case EV_JOIN_TXCOMPLETE:
-      Serial.println("EV_JOIN_TXCOMPLETE: no JoinAccept");
-      break;
-
-    default:
-      Serial.print("Event: ");
-      Serial.println((unsigned)ev);
-      break;
+    case EV_JOINED: Serial.println("EV_JOINED"); break;
+    case EV_JOIN_FAILED: Serial.println("EV_JOIN_FAILED"); break;
+    case EV_JOIN_TXCOMPLETE: Serial.println("EV_JOIN_TXCOMPLETE: no JoinAccept"); break;
+    default: Serial.printf("Event: %u\n", (unsigned)ev); break;
   }
 }
 
 
-// ================= SEND TELEMETRY =================
+// ================= SEND TELEMETRY (Modified to log power consumption) =================
 
 void do_send(osjob_t* j) {
   if (LMIC.opmode & OP_TXRXPEND) {
@@ -846,71 +551,35 @@ void do_send(osjob_t* j) {
 
   bool activeSignal = true;
 
-  Serial.println();
-  Serial.println("---- Telemetry ----");
-  Serial.print("T=");
-  Serial.print(temp, 1);
-  Serial.print(" C, H=");
-  Serial.print(hum, 1);
-  Serial.print(" %, eWBGT=");
-  Serial.print(wbgt, 1);
-  Serial.print(" C, risk=");
-  Serial.print(risk);
-  Serial.print(", fall=");
-  Serial.print(fallFlag ? 1 : 0);
-  Serial.print(", fallCount=");
-  Serial.print(fallCount);
-  Serial.print(", usb=");
-  Serial.print(usbPower ? 1 : 0);
-  Serial.print(", battery=");
-  Serial.print(batteryPct);
-  Serial.println("%");
+  Serial.println("\n---- Telemetry ----");
+  Serial.printf("T=%.1f C, H=%.1f %%, eWBGT=%.1f C, risk=%d, fall=%d, fallCount=%lu, usb=%d, battery=%d%%\n",
+                temp, hum, wbgt, risk, fallFlag ? 1 : 0, fallCount, usbPower ? 1 : 0, batteryPct);
 
-  float vbat = readBatteryVoltageAdc();
-  Serial.print("Battery voltage estimate=");
-  Serial.print(vbat, 2);
-  Serial.println(" V");
+  // Using AXP to print the current and power consumption
+if (axp_ok) {
+    if (usbPower) {
+      // Read USB current and voltage
+      float vbus_v = axp.getVbusVoltage() / 1000.0f;
+      float vbus_c = axp.getVbusCurrent(); 
+      Serial.printf("[USB Powered] Voltage: %.2f V | Current: %.2f mA\n", vbus_v, vbus_c);
+    } else {
+      // Read battery voltage and current
+      float vbat = axp.getBattVoltage() / 1000.0f;
+      float batt_c = axp.getBattDischargeCurrent();
+      Serial.printf("[Battery Powered] Voltage: %.2f V | Current: %.2f mA\n", vbat, batt_c);
+    }
+  }
   Serial.println("-------------------");
 
 #if USE_BINARY_PAYLOAD
-  uint8_t len = packPayload8(
-    payloadBin,
-    temp,
-    hum,
-    wbgt,
-    risk,
-    batteryPct,
-    fallFlag,
-    usbPower,
-    activeSignal
-  );
-
-  Serial.print("Sending binary payload, len=");
-  Serial.print(len);
-  Serial.print(", hex=");
+  uint8_t len = packPayload8(payloadBin, temp, hum, wbgt, risk, batteryPct, fallFlag, usbPower, activeSignal);
+  Serial.printf("Sending binary payload, len=%d, hex=", len);
   printPayloadHex(payloadBin, len);
-
   LMIC_setTxData2(1, payloadBin, len, 0);
   Serial.println("Packet queued");
-
 #else
-  snprintf(
-    (char*)payloadText,
-    sizeof(payloadText),
-    "T:%.1f H:%.1f WBGT:%.1f HSI:%d FALL:%d CNT:%lu BAT:%d USB:%d",
-    temp,
-    hum,
-    wbgt,
-    risk,
-    fallFlag ? 1 : 0,
-    fallCount,
-    batteryPct,
-    usbPower ? 1 : 0
-  );
-
-  Serial.print("Sending text payload: ");
-  Serial.println((char*)payloadText);
-
+  snprintf((char*)payloadText, sizeof(payloadText), "T:%.1f H:%.1f WBGT:%.1f HSI:%d FALL:%d CNT:%lu BAT:%d USB:%d", temp, hum, wbgt, risk, fallFlag ? 1 : 0, fallCount, batteryPct, usbPower ? 1 : 0);
+  Serial.printf("Sending text payload: %s\n", payloadText);
   LMIC_setTxData2(1, payloadText, strlen((char*)payloadText), 0);
   Serial.println("Packet queued");
 #endif
@@ -923,74 +592,46 @@ void setup() {
   Serial.begin(115200);
   delay(2500);
 
-  Serial.println();
-  Serial.println(">>> HeatWatch + Struggle-Friendly Fall Detection + Binary Payload <<<");
+  Serial.println("\n>>> HeatWatch + AXP192 Power Management + GPS Off <<<");
 
 #if ENABLE_LED_ALARM
   pinMode(LED_PIN, OUTPUT);
-#if LED_ACTIVE_HIGH
-  digitalWrite(LED_PIN, LOW);
-#else
-  digitalWrite(LED_PIN, HIGH);
-#endif
+  digitalWrite(LED_PIN, LED_ACTIVE_HIGH ? LOW : HIGH);
 #endif
 
   Wire.begin(I2C_SDA, I2C_SCL);
   Wire.setClock(100000);
 
+  // Initialize battery and power management
   batteryBegin();
 
-  lis_ok = lis.begin(LIS3DH_ADDR_PRIMARY);
-
-  if (!lis_ok) {
-    lis_ok = lis.begin(LIS3DH_ADDR_BACKUP);
-  }
-
+  lis_ok = lis.begin(LIS3DH_ADDR_PRIMARY) || lis.begin(LIS3DH_ADDR_BACKUP);
   if (lis_ok) {
     lis.setRange(LIS3DH_RANGE_8_G);
     lis.setDataRate(LIS3DH_DATARATE_100_HZ);
     Serial.println("LIS3DH OK");
-  } else {
-    Serial.println("LIS3DH NOT FOUND");
-  }
+  } else Serial.println("LIS3DH NOT FOUND");
 
-  bme_ok = bme.begin(BME280_ADDR_PRIMARY);
+  bme_ok = bme.begin(BME280_ADDR_PRIMARY) || bme.begin(BME280_ADDR_BACKUP);
+  if (bme_ok) Serial.println("BME280 OK");
+  else Serial.println("BME280 NOT FOUND");
 
-  if (!bme_ok) {
-    bme_ok = bme.begin(BME280_ADDR_BACKUP);
-  }
-
-  if (bme_ok) {
-    Serial.println("BME280 OK");
-  } else {
-    Serial.println("BME280 NOT FOUND");
-  }
-
-  if (lis_ok) {
-    readAccel();
-    updateBaselineOrientation();
-  }
+  if (lis_ok) { readAccel(); updateBaselineOrientation(); }
 
   SPI.begin(5, 19, 27, 18);
-
   os_init();
   LMIC_reset();
 
   uint8_t appskey[sizeof(APPSKEY)];
   uint8_t nwkskey[sizeof(NWKSKEY)];
-
   memcpy_P(appskey, APPSKEY, sizeof(APPSKEY));
   memcpy_P(nwkskey, NWKSKEY, sizeof(NWKSKEY));
 
   LMIC_setSession(0x1, DEVADDR, nwkskey, appskey);
-
-  // AU915 / TTN FSB2
   LMIC_selectSubBand(1);
-
   LMIC_setLinkCheckMode(0);
   LMIC.dn2Dr = DR_SF9;
   LMIC_setDrTxpow(DR_SF7, 14);
-
   LMIC_setClockError(MAX_CLOCK_ERROR * 1 / 100);
 
   Serial.println("Setup complete. Sending first uplink...");
@@ -999,14 +640,11 @@ void setup() {
 
 void loop() {
   os_runloop_once();
-
   updateLocalAlarm();
 
   unsigned long now = millis();
-
   if (now - lastSampleTime >= SAMPLE_INTERVAL_MS) {
     lastSampleTime = now;
-
     readAccel();
     updateFallStateMachine();
   }
