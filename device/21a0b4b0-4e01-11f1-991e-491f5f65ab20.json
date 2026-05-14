@@ -22,16 +22,16 @@
     "firmwareId" : null,
     "id" : {
       "entityType" : "DEVICE",
-      "id" : "63088c00-4a11-11f1-89de-3725b2d91471"
+      "id" : "21a0b4b0-4e01-11f1-991e-491f5f65ab20"
     },
-    "label" : "lilygo",
-    "name" : "Device 70B3D57ED00771F0",
+    "label" : "ttgo",
+    "name" : "Device 70B3D57ED00771F1",
     "ownerId" : null,
     "softwareId" : null,
     "type" : "heatstress-group10"
   },
   "credentials" : {
-    "credentialsId" : "nbChzFsu5LkDWraiNKLW",
+    "credentialsId" : "qGbL2nisrVJvFwThD69m",
     "credentialsType" : "ACCESS_TOKEN",
     "credentialsValue" : null
   },
@@ -43,11 +43,11 @@
     },
     "to" : {
       "entityType" : "DEVICE",
-      "id" : "63088c00-4a11-11f1-89de-3725b2d91471"
+      "id" : "21a0b4b0-4e01-11f1-991e-491f5f65ab20"
     },
     "type" : "ManagedByIntegration",
     "typeGroup" : "COMMON",
-    "version" : 1160642656
+    "version" : 1167616320
   } ],
   "attributes" : {
     "SERVER_SCOPE" : [ {
@@ -55,7 +55,7 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "active",
-      "lastUpdateTs" : 1778216309815,
+      "lastUpdateTs" : 1778727450676,
       "longValue" : null,
       "strValue" : null
     }, {
@@ -63,16 +63,16 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "inactivityAlarmTime",
-      "lastUpdateTs" : 1778171016905,
-      "longValue" : 1778171016904,
+      "lastUpdateTs" : 1778599884630,
+      "longValue" : 1778599884626,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastActivityTime",
-      "lastUpdateTs" : 1778735808680,
-      "longValue" : 1778735808286,
+      "lastUpdateTs" : 1778735832682,
+      "longValue" : 1778735830834,
       "strValue" : null
     } ],
     "SHARED_SCOPE" : [ ]

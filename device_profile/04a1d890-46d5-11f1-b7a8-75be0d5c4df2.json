@@ -5,7 +5,10 @@
     "defaultDashboardId" : null,
     "defaultEdgeRuleChainId" : null,
     "defaultQueueName" : null,
-    "defaultRuleChainId" : null,
+    "defaultRuleChainId" : {
+      "entityType" : "RULE_CHAIN",
+      "id" : "baed9b40-4ee4-11f1-befc-1dd22c41a268"
+    },
     "description" : "Default device profile",
     "externalId" : null,
     "firmwareId" : null,
@@ -38,5 +41,150 @@
   "attributes" : {
     "SERVER_SCOPE" : [ ]
   },
-  "calculatedFields" : [ ]
+  "calculatedFields" : [ {
+    "additionalInfo" : null,
+    "configuration" : {
+      "type" : "ALARM",
+      "arguments" : {
+        "fallDetected" : {
+          "defaultValue" : "",
+          "refEntityKey" : {
+            "key" : "fallDetected",
+            "type" : "TS_LATEST"
+          }
+        }
+      },
+      "clearRule" : null,
+      "createRules" : {
+        "CRITICAL" : {
+          "alarmDetails" : null,
+          "condition" : {
+            "type" : "SIMPLE",
+            "expression" : {
+              "type" : "SIMPLE",
+              "filters" : [ {
+                "argument" : "fallDetected",
+                "operation" : "AND",
+                "predicates" : [ {
+                  "type" : "BOOLEAN",
+                  "operation" : "EQUAL",
+                  "value" : {
+                    "dynamicValueArgument" : null,
+                    "staticValue" : true
+                  }
+                } ],
+                "valueType" : "BOOLEAN"
+              } ],
+              "operation" : "AND"
+            },
+            "schedule" : null
+          },
+          "dashboardId" : null
+        }
+      },
+      "output" : null,
+      "propagate" : false,
+      "propagateRelationTypes" : null,
+      "propagateToOwner" : false,
+      "propagateToOwnerHierarchy" : false,
+      "propagateToTenant" : false
+    },
+    "configurationVersion" : 0,
+    "debugSettings" : {
+      "allEnabled" : false,
+      "allEnabledUntil" : 1778698882405,
+      "failuresEnabled" : true
+    },
+    "name" : "Fall Detection",
+    "tenantId" : {
+      "entityType" : "TENANT",
+      "id" : "048ace20-46d5-11f1-b7a8-75be0d5c4df2"
+    },
+    "type" : "ALARM"
+  }, {
+    "additionalInfo" : null,
+    "configuration" : {
+      "type" : "ALARM",
+      "arguments" : {
+        "riskLevel" : {
+          "defaultValue" : "",
+          "refEntityKey" : {
+            "key" : "riskLevel",
+            "type" : "TS_LATEST"
+          }
+        }
+      },
+      "clearRule" : null,
+      "createRules" : {
+        "CRITICAL" : {
+          "alarmDetails" : null,
+          "condition" : {
+            "type" : "SIMPLE",
+            "expression" : {
+              "type" : "SIMPLE",
+              "filters" : [ {
+                "argument" : "riskLevel",
+                "operation" : "AND",
+                "predicates" : [ {
+                  "type" : "NUMERIC",
+                  "operation" : "EQUAL",
+                  "value" : {
+                    "dynamicValueArgument" : null,
+                    "staticValue" : 3.0
+                  }
+                } ],
+                "valueType" : "NUMERIC"
+              } ],
+              "operation" : "AND"
+            },
+            "schedule" : null
+          },
+          "dashboardId" : null
+        },
+        "WARNING" : {
+          "alarmDetails" : null,
+          "condition" : {
+            "type" : "SIMPLE",
+            "expression" : {
+              "type" : "SIMPLE",
+              "filters" : [ {
+                "argument" : "riskLevel",
+                "operation" : "AND",
+                "predicates" : [ {
+                  "type" : "NUMERIC",
+                  "operation" : "EQUAL",
+                  "value" : {
+                    "dynamicValueArgument" : null,
+                    "staticValue" : 2.0
+                  }
+                } ],
+                "valueType" : "NUMERIC"
+              } ],
+              "operation" : "AND"
+            },
+            "schedule" : null
+          },
+          "dashboardId" : null
+        }
+      },
+      "output" : null,
+      "propagate" : false,
+      "propagateRelationTypes" : null,
+      "propagateToOwner" : false,
+      "propagateToOwnerHierarchy" : false,
+      "propagateToTenant" : false
+    },
+    "configurationVersion" : 0,
+    "debugSettings" : {
+      "allEnabled" : false,
+      "allEnabledUntil" : 1778691863785,
+      "failuresEnabled" : true
+    },
+    "name" : "Risk Detection",
+    "tenantId" : {
+      "entityType" : "TENANT",
+      "id" : "048ace20-46d5-11f1-b7a8-75be0d5c4df2"
+    },
+    "type" : "ALARM"
+  } ]
 }
