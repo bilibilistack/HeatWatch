@@ -15,7 +15,7 @@ static const u4_t DEVADDR = 0x260D38CB;
 void os_getArtEui (u1_t* buf) { }
 void os_getDevEui (u1_t* buf) { }
 void os_getDevKey (u1_t* buf) { }
-
+#define LED_PIN 25
 // ==================== 硬件对象 ====================
 Adafruit_BME280 bme;
 MAX30105 particleSensor;
@@ -78,7 +78,41 @@ float calculateWBGT(float temp, float rh) {
 float calculateDI(float temp, float rh) {
     return temp - 0.55 * (1 - 0.01 * rh) * (temp - 14.5);
 }
+// =================LED========================
+void updateLED() {
+    static unsigned long lastBlink = 0;
+    static bool ledState = false;
+    unsigned long now = millis();
 
+    switch (currentRisk) {
+        case NORMAL:
+            if (now - lastBlink > 3000) {
+                lastBlink = now;
+                ledState = !ledState;
+                digitalWrite(LED_PIN, ledState);
+            }
+            break;
+        case WARNING:
+            if (now - lastBlink > 500) {
+                lastBlink = now;
+                ledState = !ledState;
+                digitalWrite(LED_PIN, ledState);
+            }
+            break;
+        case CRITICAL:
+            digitalWrite(LED_PIN, HIGH);
+            break;
+    }
+}
+
+void blinkOnSend() {
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(100);
+        digitalWrite(LED_PIN, LOW);
+        delay(100);
+    }
+}
 // ==================== 震动控制 ====================
 void triggerVibration(int pattern) {
     // TODO: ERM 震动马达到货后实现
@@ -113,36 +147,27 @@ void do_send(osjob_t* j) {
         return;
     }
 
-    uint8_t payload[8];
+    uint8_t payload[9];
     
     // Byte 0-1: 温度 int16 x10
     int16_t tempRaw = (int16_t)(airTemp * 10);
     payload[0] = (tempRaw >> 8) & 0xFF;
     payload[1] = tempRaw & 0xFF;
-    
-    // Byte 2: 湿度 x2 存1字节
     payload[2] = (uint8_t)constrain(humidity * 2, 0, 255);
-    
-    // Byte 3-4: WBGT int16 x10
     int16_t wbgtRaw = (int16_t)(effectiveWBGT * 10);
     payload[3] = (wbgtRaw >> 8) & 0xFF;
     payload[4] = wbgtRaw & 0xFF;
-    
-    // Byte 5: 风险等级
     payload[5] = (uint8_t)currentRisk;
-    
-    // Byte 6: 心率 BPM
-    payload[6] = (uint8_t)constrain(beatAvg, 0, 255);
-    
-    // Byte 7: 状态位 active_signal=1
-    payload[7] = 0x04; // bit2=active_signal=1
+    payload[6] = 0;  // battery，没有传感器填0
+    payload[7] = 0x04; // 状态位 active_signal=1
+    payload[8] = (uint8_t)constrain(beatAvg, 0, 255); // 心率
 
     Serial.print("TX: T:"); Serial.print(airTemp);
     Serial.print(" H:"); Serial.print(humidity);
     Serial.print(" W:"); Serial.print(effectiveWBGT);
     Serial.print(" BPM:"); Serial.print(beatAvg);
     Serial.print(" R:"); Serial.println(currentRisk);
-
+    blinkOnSend();
     LMIC_setTxData2(1, payload, sizeof(payload), 0);
     Serial.println("Packet queued (8 bytes)");
     lastTxTime = millis();
@@ -194,7 +219,7 @@ void TaskBioMotion(void *pv) {
                 }
             }
         }
-
+        updateLED();
         vTaskDelay(pdMS_TO_TICKS(20)); // 50Hz
     }
 }
@@ -284,7 +309,8 @@ void setup() {
     xTaskCreatePinnedToCore(TaskBioMotion,     "BioMotion",     4096, NULL, 2, NULL,            1);
     xTaskCreatePinnedToCore(TaskEnvironment,   "Environment",   4096, NULL, 1, NULL,            0);
     xTaskCreatePinnedToCore(TaskCommunication, "Communication", 8192, NULL, 3, &taskCommHandle, 0);
-
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
     Serial.println("Setup complete!");
 }
 
