@@ -250,7 +250,7 @@ void batteryBegin() {
     axp_ok = true;
     
     // Enable ADC sampling
-    axp.adc1Enable(AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1 | AXP202_BATT_V_ADC1 | AXP202_BATT_CUR_ADC1, true);
+    axp.adc1Enable(AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1 | AXP202_BATT_VOL_ADC1 | AXP202_BATT_CUR_ADC1, true);
 
     // Turn off GPS to save power
     axp.setPowerOutPut(AXP192_LDO3, false);
