@@ -1,11 +1,7 @@
 {
   "entityType" : "DEVICE",
   "entity" : {
-    "additionalInfo" : {
-      "gateway" : false,
-      "overwriteActivityTime" : false,
-      "description" : ""
-    },
+    "additionalInfo" : null,
     "customerId" : {
       "entityType" : "CUSTOMER",
       "id" : "13814000-1dd2-11b2-8080-808080808080"
@@ -20,33 +16,46 @@
     },
     "deviceProfileId" : {
       "entityType" : "DEVICE_PROFILE",
-      "id" : "04a1d890-46d5-11f1-b7a8-75be0d5c4df2"
+      "id" : "d58034b0-4a0f-11f1-89de-3725b2d91471"
     },
     "externalId" : null,
     "firmwareId" : null,
     "id" : {
       "entityType" : "DEVICE",
-      "id" : "793ee760-46d5-11f1-b7a8-75be0d5c4df2"
+      "id" : "21a0b4b0-4e01-11f1-991e-491f5f65ab20"
     },
-    "label" : "",
-    "name" : "HeatWatch Simulator",
+    "label" : "ttgo",
+    "name" : "Device 70B3D57ED00771F1",
     "ownerId" : null,
     "softwareId" : null,
-    "type" : "default"
+    "type" : "heatstress-group10"
   },
   "credentials" : {
-    "credentialsId" : "azhswcapp3p8fa1lz9yl",
+    "credentialsId" : "qGbL2nisrVJvFwThD69m",
     "credentialsType" : "ACCESS_TOKEN",
     "credentialsValue" : null
   },
-  "relations" : [ ],
+  "relations" : [ {
+    "additionalInfo" : null,
+    "from" : {
+      "entityType" : "INTEGRATION",
+      "id" : "0d0a5040-47d2-11f1-b75f-3300bce53b8d"
+    },
+    "to" : {
+      "entityType" : "DEVICE",
+      "id" : "21a0b4b0-4e01-11f1-991e-491f5f65ab20"
+    },
+    "type" : "ManagedByIntegration",
+    "typeGroup" : "COMMON",
+    "version" : 1167616320
+  } ],
   "attributes" : {
     "SERVER_SCOPE" : [ {
-      "booleanValue" : false,
+      "booleanValue" : true,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "active",
-      "lastUpdateTs" : 1778135822832,
+      "lastUpdateTs" : 1778727450676,
       "longValue" : null,
       "strValue" : null
     }, {
@@ -54,32 +63,16 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "inactivityAlarmTime",
-      "lastUpdateTs" : 1778135822823,
-      "longValue" : 1778135822822,
+      "lastUpdateTs" : 1778599884630,
+      "longValue" : 1778599884626,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastActivityTime",
-      "lastUpdateTs" : 1778135198355,
-      "longValue" : 1778135196554,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastConnectTime",
-      "lastUpdateTs" : 1778129158261,
-      "longValue" : 1778129158261,
-      "strValue" : null
-    }, {
-      "booleanValue" : null,
-      "doubleValue" : null,
-      "jsonValue" : null,
-      "key" : "lastDisconnectTime",
-      "lastUpdateTs" : 1778135196560,
-      "longValue" : 1778135196560,
+      "lastUpdateTs" : 1778735832682,
+      "longValue" : 1778735830834,
       "strValue" : null
     } ],
     "SHARED_SCOPE" : [ ]

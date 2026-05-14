@@ -22,7 +22,7 @@
     "triggerConfig" : {
       "triggerType" : "EDGE_CONNECTION",
       "edges" : null,
-      "notifyOn" : [ "CONNECTED", "DISCONNECTED" ],
+      "notifyOn" : [ "DISCONNECTED", "CONNECTED" ],
       "triggerType" : "EDGE_CONNECTION"
     },
     "triggerType" : "EDGE_CONNECTION"

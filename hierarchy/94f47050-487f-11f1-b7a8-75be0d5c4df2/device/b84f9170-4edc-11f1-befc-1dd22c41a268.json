@@ -4,11 +4,12 @@
     "additionalInfo" : {
       "gateway" : false,
       "overwriteActivityTime" : false,
-      "description" : ""
+      "description" : "",
+      "lastConnectedGateway" : "c1857ae0-4edf-11f1-befc-1dd22c41a268"
     },
     "customerId" : {
       "entityType" : "CUSTOMER",
-      "id" : "13814000-1dd2-11b2-8080-808080808080"
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
     },
     "deviceData" : {
       "configuration" : {
@@ -26,16 +27,19 @@
     "firmwareId" : null,
     "id" : {
       "entityType" : "DEVICE",
-      "id" : "793ee760-46d5-11f1-b7a8-75be0d5c4df2"
+      "id" : "b84f9170-4edc-11f1-befc-1dd22c41a268"
     },
-    "label" : "",
-    "name" : "HeatWatch Simulator",
-    "ownerId" : null,
+    "label" : "A-001",
+    "name" : "A-001",
+    "ownerId" : {
+      "entityType" : "CUSTOMER",
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
+    },
     "softwareId" : null,
     "type" : "default"
   },
   "credentials" : {
-    "credentialsId" : "azhswcapp3p8fa1lz9yl",
+    "credentialsId" : "A-001",
     "credentialsType" : "ACCESS_TOKEN",
     "credentialsValue" : null
   },
@@ -46,7 +50,7 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "active",
-      "lastUpdateTs" : 1778135822832,
+      "lastUpdateTs" : 1778699920301,
       "longValue" : null,
       "strValue" : null
     }, {
@@ -54,35 +58,51 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "inactivityAlarmTime",
-      "lastUpdateTs" : 1778135822823,
-      "longValue" : 1778135822822,
+      "lastUpdateTs" : 1778699920292,
+      "longValue" : 1778699920289,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastActivityTime",
-      "lastUpdateTs" : 1778135198355,
-      "longValue" : 1778135196554,
+      "lastUpdateTs" : 1778699297361,
+      "longValue" : 1778699294884,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastConnectTime",
-      "lastUpdateTs" : 1778129158261,
-      "longValue" : 1778129158261,
+      "lastUpdateTs" : 1778698994498,
+      "longValue" : 1778698994498,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastDisconnectTime",
-      "lastUpdateTs" : 1778135196560,
-      "longValue" : 1778135196560,
+      "lastUpdateTs" : 1778699294890,
+      "longValue" : 1778699294890,
       "strValue" : null
     } ],
-    "SHARED_SCOPE" : [ ]
+    "SHARED_SCOPE" : [ {
+      "booleanValue" : null,
+      "doubleValue" : null,
+      "jsonValue" : null,
+      "key" : "emgContact",
+      "lastUpdateTs" : 1778697464843,
+      "longValue" : null,
+      "strValue" : "04******"
+    }, {
+      "booleanValue" : null,
+      "doubleValue" : null,
+      "jsonValue" : null,
+      "key" : "workerName",
+      "lastUpdateTs" : 1778697512975,
+      "longValue" : null,
+      "strValue" : "WorkerA"
+    } ]
   },
   "calculatedFields" : [ ]
 }

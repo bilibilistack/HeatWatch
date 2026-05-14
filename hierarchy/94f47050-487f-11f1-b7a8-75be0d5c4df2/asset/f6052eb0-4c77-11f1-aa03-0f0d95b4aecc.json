@@ -1,0 +1,33 @@
+{
+  "entityType" : "ASSET",
+  "entity" : {
+    "additionalInfo" : {
+      "description" : ""
+    },
+    "assetProfileId" : {
+      "entityType" : "ASSET_PROFILE",
+      "id" : "04a33820-46d5-11f1-b7a8-75be0d5c4df2"
+    },
+    "customerId" : {
+      "entityType" : "CUSTOMER",
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
+    },
+    "externalId" : null,
+    "id" : {
+      "entityType" : "ASSET",
+      "id" : "f6052eb0-4c77-11f1-aa03-0f0d95b4aecc"
+    },
+    "label" : null,
+    "name" : "Mining Area A",
+    "ownerId" : {
+      "entityType" : "CUSTOMER",
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
+    },
+    "type" : "default"
+  },
+  "relations" : [ ],
+  "attributes" : {
+    "SERVER_SCOPE" : [ ]
+  },
+  "calculatedFields" : [ ]
+}

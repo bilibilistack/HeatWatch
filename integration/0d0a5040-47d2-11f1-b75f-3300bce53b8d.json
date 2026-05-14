@@ -1,7 +1,9 @@
 {
   "entityType" : "INTEGRATION",
   "entity" : {
-    "additionalInfo" : null,
+    "additionalInfo" : {
+      "description" : ""
+    },
     "allowCreateDevicesOrAssets" : true,
     "configuration" : {
       "metadata" : { },
@@ -28,12 +30,12 @@
     "debugMode" : false,
     "debugSettings" : {
       "allEnabled" : false,
-      "allEnabledUntil" : 1777911191268,
+      "allEnabledUntil" : 1778157597037,
       "failuresEnabled" : true
     },
     "defaultConverterId" : {
       "entityType" : "CONVERTER",
-      "id" : "0cdc6270-47d2-11f1-b75f-3300bce53b8d"
+      "id" : "002a5f20-49d3-11f1-9234-b7886a2047b6"
     },
     "downlinkConverterId" : null,
     "edgeTemplate" : false,
@@ -43,20 +45,46 @@
       "entityType" : "INTEGRATION",
       "id" : "0d0a5040-47d2-11f1-b75f-3300bce53b8d"
     },
-    "name" : "The Things Stack Community integration",
+    "name" : "The Things Stack",
     "remote" : false,
     "routingKey" : "f8e39a35-cf97-44b4-c8cd-98fa75c3861f",
     "secret" : "32ybs2cizssv032uux6v",
     "type" : "TTN"
   },
-  "relations" : [ ],
+  "relations" : [ {
+    "additionalInfo" : null,
+    "from" : {
+      "entityType" : "INTEGRATION",
+      "id" : "0d0a5040-47d2-11f1-b75f-3300bce53b8d"
+    },
+    "to" : {
+      "entityType" : "DEVICE",
+      "id" : "21a0b4b0-4e01-11f1-991e-491f5f65ab20"
+    },
+    "type" : "ManagedByIntegration",
+    "typeGroup" : "COMMON",
+    "version" : 1167616320
+  }, {
+    "additionalInfo" : null,
+    "from" : {
+      "entityType" : "INTEGRATION",
+      "id" : "0d0a5040-47d2-11f1-b75f-3300bce53b8d"
+    },
+    "to" : {
+      "entityType" : "DEVICE",
+      "id" : "63088c00-4a11-11f1-89de-3725b2d91471"
+    },
+    "type" : "ManagedByIntegration",
+    "typeGroup" : "COMMON",
+    "version" : 1160642656
+  } ],
   "attributes" : {
     "SERVER_SCOPE" : [ {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : "{\"success\":true}",
       "key" : "integration_status_tb-ie-main-1",
-      "lastUpdateTs" : 1777910292213,
+      "lastUpdateTs" : 1778157204642,
       "longValue" : null,
       "strValue" : null
     } ]
