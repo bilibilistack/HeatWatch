@@ -34,6 +34,14 @@ volatile float externalWBGT = 0;
 volatile float effectiveWBGT = 0;
 volatile float DI = 0;
 
+// ==================== 下行功能配置与超时变量 ====================
+volatile unsigned long lastExternalWBGTTime = 0;
+const unsigned long EXTERNAL_WBGT_TIMEOUT = 30 * 60 * 1000; // 外部气象WBGT有效超时时间: 30分钟
+
+volatile bool alarmMuted = false;
+volatile unsigned long muteStartTime = 0;
+const unsigned long MUTE_DURATION = 10 * 60 * 1000;         // 人工解除警报/静音持续时间: 10分钟
+
 // ==================== 心率计算 ====================
 const byte RATE_SIZE = 4;
 byte rates[RATE_SIZE];
@@ -84,6 +92,16 @@ void updateLED() {
     static bool ledState = false;
     unsigned long now = millis();
 
+    // 如果处于人工解除警报/静音状态，抑制高频警报闪烁，退回待机呼吸闪烁
+    if (alarmMuted && (now - muteStartTime < MUTE_DURATION)) {
+        if (now - lastBlink > 3000) {
+            lastBlink = now;
+            ledState = !ledState;
+            digitalWrite(LED_PIN, ledState);
+        }
+        return;
+    }
+
     switch (currentRisk) {
         case NORMAL:
             if (now - lastBlink > 3000) {
@@ -117,26 +135,55 @@ void blinkOnSend() {
 void triggerVibration(int pattern) {
     // TODO: ERM 震动马达到货后实现
     Serial.print("[VIB] Pattern: ");
-    Serial.println(pattern == 1 ? "Short (Warning)" : "Continuous (Critical)");
+    if (pattern == 0) {
+        Serial.println("Stop / Mute (Manually dismissed)");
+    } else if (pattern == 1) {
+        Serial.println("Short (Warning)");
+    } else if (pattern == 2) {
+        Serial.println("Continuous (Critical)");
+    } else if (pattern == 3) {
+        Serial.println("3x Pulses (Personal Hydration Reminder)");
+        // 模拟补水提示：震动/闪烁3次
+        for (int i = 0; i < 3; i++) {
+            digitalWrite(LED_PIN, HIGH);
+            vTaskDelay(pdMS_TO_TICKS(150));
+            digitalWrite(LED_PIN, LOW);
+            vTaskDelay(pdMS_TO_TICKS(150));
+        }
+    }
 }
 
 // ==================== 热应力判定 ====================
 void determineHeatStress() {
-    effectiveWBGT = max(localWBGT, externalWBGT);
+    unsigned long now = millis();
+
+    // 1. 功能点1：优先采用下发的精确WBGT替换模拟计算，带30分钟超时降级保护
+    if (externalWBGT > 0 && (now - lastExternalWBGTTime < EXTERNAL_WBGT_TIMEOUT)) {
+        effectiveWBGT = externalWBGT;
+    } else {
+        effectiveWBGT = localWBGT; // 超时或未下发，回退使用本地估算值
+    }
+
+    // 检查人工静音是否已到期超时
+    if (alarmMuted && (now - muteStartTime >= MUTE_DURATION)) {
+        alarmMuted = false;
+        Serial.println("[MUTE] Manual alarm mute expired.");
+    }
 
     if (effectiveWBGT > 33.0 || beatsPerMinute > 160) {
         currentRisk = CRITICAL;
         txInterval = 30;
-        triggerVibration(2);
+        if (!alarmMuted) triggerVibration(2); // 未静音时触发连续震动
         Serial.println("[ALERT] CRITICAL!");
     } else if (effectiveWBGT > 30.0) {
         currentRisk = WARNING;
         txInterval = 30;
-        triggerVibration(1);
+        if (!alarmMuted) triggerVibration(1); // 未静音时触发短震动
         Serial.println("[WARN] WARNING!");
     } else {
         currentRisk = NORMAL;
         txInterval = 30;
+        alarmMuted = false; // 风险解除时自动重置静音标记
     }
 }
 
@@ -170,7 +217,6 @@ void do_send(osjob_t* j) {
     blinkOnSend();
     LMIC_setTxData2(1, payload, sizeof(payload), 0);
     Serial.println("Packet queued (8 bytes)");
-    lastTxTime = millis();
 }
 // ==================== LoRaWAN 回调 ====================
 void onEvent(ev_t ev) {
@@ -180,15 +226,37 @@ void onEvent(ev_t ev) {
             break;
         case EV_TXCOMPLETE:
             Serial.println("EV_TXCOMPLETE");
+            lastTxTime = millis();
+
             if (LMIC.dataLen) {
                 uint8_t cmd = LMIC.frame[LMIC.dataBeg];
+                Serial.printf("[DOWNLINK] CMD: 0x%02X, Len: %d\n", cmd, LMIC.dataLen);
+
                 if (cmd == 0xF1) {
                     triggerVibration(2);
                     Serial.println("Force vibrate command!");
-                } else if (cmd == 0xF2) {
-                    externalWBGT = LMIC.frame[LMIC.dataBeg + 1] / 10.0;
-                    Serial.print("External WBGT: ");
-                    Serial.println(externalWBGT);
+                } 
+                else if (cmd == 0xF2) {
+                    // 功能点1: 接收外部精准WBGT
+                    if (LMIC.dataLen >= 2) {
+                        externalWBGT = LMIC.frame[LMIC.dataBeg + 1] / 10.0f;
+                        lastExternalWBGTTime = millis();
+                        Serial.print("External WBGT updated: ");
+                        Serial.println(externalWBGT);
+                        determineHeatStress(); // 立即重新计算热应力
+                    }
+                } 
+                else if (cmd == 0xF3) {
+                    // 功能点2: 调度中心人工下发解除报警信令
+                    alarmMuted = true;
+                    muteStartTime = millis();
+                    triggerVibration(0); // 立即停止震动
+                    Serial.println("[DOWNLINK] Alarm manually dismissed by Control Centre.");
+                } 
+                else if (cmd == 0xF4) {
+                    // 功能点3: 基于云端复杂算法的补水提醒 (震动/闪烁3次)
+                    triggerVibration(3);
+                    Serial.println("[DOWNLINK] Personal hydration reminder received (3x pulses).");
                 }
             }
             break;
@@ -200,7 +268,12 @@ void onEvent(ev_t ev) {
 // ==================== Task 1: 心率采样 (Core 1) ====================
 void TaskBioMotion(void *pv) {
     for(;;) {
-        long irValue = particleSensor.getIR();
+        long irValue = 0;
+        // 修复Bug 2: 跨核访问I2C总线必须加互斥锁，防止ESP32硬件I2C控制器死锁崩溃
+        if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(10))) {
+            irValue = particleSensor.getIR();
+            xSemaphoreGive(i2cMutex);
+        }
 
         if (irValue < 50000) {
             beatAvg = 0;
@@ -258,12 +331,13 @@ void TaskCommunication(void *pv) {
 
         unsigned long now = millis();
 
-        if (lastTxTime == 0 && now - startTime > 20000) {
-            lastTxTime = now;
+        if (lastTxTime == 0 && (now - startTime > 20000)) {
+            lastTxTime = now; // 修复Bug 1: 发起发送前立即更新lastTxTime，防止下一毫秒重复触发
             do_send(&sendjob);
         }
 
-        if (lastTxTime > 0 && now - lastTxTime >= txInterval * 1000) {
+        if (lastTxTime > 0 && (now - lastTxTime >= txInterval * 1000)) {
+            lastTxTime = now; // 修复Bug 1: 立即更新lastTxTime，防止疯狂打印 OP_TXRXPEND 风暴
             do_send(&sendjob);
         }
 
