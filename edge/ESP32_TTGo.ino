@@ -7,7 +7,7 @@
 #include "heartRate.h"
 #include <math.h>
 
-// ==================== LoRaWAN 密钥 ====================
+// ==================== LoRaWAN Keys ====================
 static const PROGMEM u1_t NWKSKEY[16] = { 0x3C, 0x55, 0x06, 0xB7, 0xAC, 0x1B, 0xD5, 0x85, 0x77, 0x8B, 0xA0, 0x22, 0xE9, 0x22, 0x08, 0xC9 };
 static const u1_t PROGMEM APPSKEY[16] = { 0x2A, 0x3B, 0x5B, 0x7B, 0x85, 0x40, 0x58, 0x1C, 0xFD, 0xCD, 0x5E, 0x19, 0x55, 0x46, 0x7F, 0x4C };
 static const u4_t DEVADDR = 0x260D38CB;
@@ -15,41 +15,43 @@ static const u4_t DEVADDR = 0x260D38CB;
 void os_getArtEui (u1_t* buf) { }
 void os_getDevEui (u1_t* buf) { }
 void os_getDevKey (u1_t* buf) { }
+
 #define LED_PIN 25
-// ==================== 硬件对象 ====================
+
+// ==================== Hardware Objects ====================
 Adafruit_BME280 bme;
 MAX30105 particleSensor;
 
-// ==================== 风险等级 ====================
+// ==================== Risk Levels ====================
 typedef enum { NORMAL, WARNING, CRITICAL } RiskLevel;
 volatile RiskLevel currentRisk = NORMAL;
 
-// ==================== 全局传感器数据 ====================
+// ==================== Global Sensor Data ====================
 volatile int beatAvg = 0;
 volatile float airTemp = 0;
 volatile float humidity = 0;
-volatile float skinTemp = 0;      // TODO: MLX90614 到货后替换
+volatile float skinTemp = 0;      // TODO: Replace with real MLX90614 when sensor arrives
 volatile float localWBGT = 0;
 volatile float externalWBGT = 0;
 volatile float effectiveWBGT = 0;
 volatile float DI = 0;
 
-// ==================== 下行功能配置与超时变量 ====================
+// ==================== Downlink Config & Timeout ====================
 volatile unsigned long lastExternalWBGTTime = 0;
-const unsigned long EXTERNAL_WBGT_TIMEOUT = 30 * 60 * 1000; // 外部气象WBGT有效超时时间: 30分钟
+const unsigned long EXTERNAL_WBGT_TIMEOUT = 30 * 60 * 1000; // External WBGT expires after 30 min
 
 volatile bool alarmMuted = false;
 volatile unsigned long muteStartTime = 0;
-const unsigned long MUTE_DURATION = 10 * 60 * 1000;         // 人工解除警报/静音持续时间: 10分钟
+const unsigned long MUTE_DURATION = 10 * 60 * 1000; // Manual mute lasts 10 min
 
-// ==================== 心率计算 ====================
+// ==================== Heart Rate ====================
 const byte RATE_SIZE = 4;
 byte rates[RATE_SIZE];
 byte rateSpot = 0;
 long lastBeat = 0;
 float beatsPerMinute = 0;
 
-// ==================== 上报间隔 ====================
+// ==================== TX Interval ====================
 volatile unsigned long txInterval = 30;
 unsigned long lastTxTime = 0;
 
@@ -67,8 +69,8 @@ const lmic_pinmap lmic_pins = {
     .dio = {26, 33, 32},
 };
 
-// ==================== 模拟 MLX90614 体表温度 ====================
-// TODO: 传感器到货后删除此函数，替换为真实读取
+// ==================== Simulated Skin Temp (MLX90614) ====================
+// TODO: Delete this and use real MLX90614 reading when sensor arrives
 float simulateSkinTemp() {
     static float lastSkinTemp = 36.5;
     lastSkinTemp += random(-10, 10) / 100.0;
@@ -76,23 +78,24 @@ float simulateSkinTemp() {
     return lastSkinTemp;
 }
 
-// ==================== WBGT 计算 ====================
+// ==================== WBGT Calculation ====================
 float calculateWBGT(float temp, float rh) {
     return 0.567 * temp + 0.393 * (rh / 100.0 * 6.105 *
            exp(17.27 * temp / (237.7 + temp))) + 3.94;
 }
 
-// ==================== 不适指数 DI ====================
+// ==================== Discomfort Index ====================
 float calculateDI(float temp, float rh) {
     return temp - 0.55 * (1 - 0.01 * rh) * (temp - 14.5);
 }
-// =================LED========================
+
+// ==================== LED Control ====================
 void updateLED() {
     static unsigned long lastBlink = 0;
     static bool ledState = false;
     unsigned long now = millis();
 
-    // 如果处于人工解除警报/静音状态，抑制高频警报闪烁，退回待机呼吸闪烁
+    // During mute, slow blink regardless of risk level
     if (alarmMuted && (now - muteStartTime < MUTE_DURATION)) {
         if (now - lastBlink > 3000) {
             lastBlink = now;
@@ -104,21 +107,21 @@ void updateLED() {
 
     switch (currentRisk) {
         case NORMAL:
-            if (now - lastBlink > 3000) {
+            if (now - lastBlink > 3000) { // Slow blink
                 lastBlink = now;
                 ledState = !ledState;
                 digitalWrite(LED_PIN, ledState);
             }
             break;
         case WARNING:
-            if (now - lastBlink > 500) {
+            if (now - lastBlink > 500) { // Fast blink
                 lastBlink = now;
                 ledState = !ledState;
                 digitalWrite(LED_PIN, ledState);
             }
             break;
         case CRITICAL:
-            digitalWrite(LED_PIN, HIGH);
+            digitalWrite(LED_PIN, HIGH); // Solid on
             break;
     }
 }
@@ -131,9 +134,10 @@ void blinkOnSend() {
         delay(100);
     }
 }
-// ==================== 震动控制 ====================
+
+// ==================== Vibration Control ====================
 void triggerVibration(int pattern) {
-    // TODO: ERM 震动马达到货后实现
+    // TODO: Implement with real ERM motor when it arrives
     Serial.print("[VIB] Pattern: ");
     if (pattern == 0) {
         Serial.println("Stop / Mute (Manually dismissed)");
@@ -143,7 +147,6 @@ void triggerVibration(int pattern) {
         Serial.println("Continuous (Critical)");
     } else if (pattern == 3) {
         Serial.println("3x Pulses (Personal Hydration Reminder)");
-        // 模拟补水提示：震动/闪烁3次
         for (int i = 0; i < 3; i++) {
             digitalWrite(LED_PIN, HIGH);
             vTaskDelay(pdMS_TO_TICKS(150));
@@ -153,18 +156,18 @@ void triggerVibration(int pattern) {
     }
 }
 
-// ==================== 热应力判定 ====================
+// ==================== Heat Stress Assessment ====================
 void determineHeatStress() {
     unsigned long now = millis();
 
-    // 1. 功能点1：优先采用下发的精确WBGT替换模拟计算，带30分钟超时降级保护
+    // Use external WBGT if available and not expired, else fall back to local
     if (externalWBGT > 0 && (now - lastExternalWBGTTime < EXTERNAL_WBGT_TIMEOUT)) {
         effectiveWBGT = externalWBGT;
     } else {
-        effectiveWBGT = localWBGT; // 超时或未下发，回退使用本地估算值
+        effectiveWBGT = localWBGT;
     }
 
-    // 检查人工静音是否已到期超时
+    // Auto-reset mute when duration expires
     if (alarmMuted && (now - muteStartTime >= MUTE_DURATION)) {
         alarmMuted = false;
         Serial.println("[MUTE] Manual alarm mute expired.");
@@ -173,21 +176,21 @@ void determineHeatStress() {
     if (effectiveWBGT > 33.0 || beatsPerMinute > 160) {
         currentRisk = CRITICAL;
         txInterval = 30;
-        if (!alarmMuted) triggerVibration(2); // 未静音时触发连续震动
+        if (!alarmMuted) triggerVibration(2); // Continuous vibration
         Serial.println("[ALERT] CRITICAL!");
     } else if (effectiveWBGT > 30.0) {
         currentRisk = WARNING;
         txInterval = 30;
-        if (!alarmMuted) triggerVibration(1); // 未静音时触发短震动
+        if (!alarmMuted) triggerVibration(1); // Short vibration
         Serial.println("[WARN] WARNING!");
     } else {
         currentRisk = NORMAL;
         txInterval = 30;
-        alarmMuted = false; // 风险解除时自动重置静音标记
+        alarmMuted = false; // Clear mute when risk returns to normal
     }
 }
 
-// ==================== LoRaWAN 二进制打包发送 ====================
+// ==================== LoRaWAN Uplink ====================
 void do_send(osjob_t* j) {
     if (LMIC.opmode & OP_TXRXPEND) {
         Serial.println("OP_TXRXPEND, not sending");
@@ -195,8 +198,8 @@ void do_send(osjob_t* j) {
     }
 
     uint8_t payload[9];
-    
-    // Byte 0-1: 温度 int16 x10
+
+    // Byte 0-1: Air temperature (int16, x10)
     int16_t tempRaw = (int16_t)(airTemp * 10);
     payload[0] = (tempRaw >> 8) & 0xFF;
     payload[1] = tempRaw & 0xFF;
@@ -205,20 +208,22 @@ void do_send(osjob_t* j) {
     payload[3] = (wbgtRaw >> 8) & 0xFF;
     payload[4] = wbgtRaw & 0xFF;
     payload[5] = (uint8_t)currentRisk;
-    payload[6] = 0;  // battery，没有传感器填0
-    payload[7] = 0x04; // 状态位 active_signal=1
-    payload[8] = (uint8_t)constrain(beatAvg, 0, 255); // 心率
+    payload[6] = 0;        // Battery — no sensor, placeholder
+    payload[7] = 0x04;     // Status byte: active_signal=1
+    payload[8] = (uint8_t)constrain(beatAvg, 0, 255); // Heart rate
 
     Serial.print("TX: T:"); Serial.print(airTemp);
     Serial.print(" H:"); Serial.print(humidity);
     Serial.print(" W:"); Serial.print(effectiveWBGT);
     Serial.print(" BPM:"); Serial.print(beatAvg);
     Serial.print(" R:"); Serial.println(currentRisk);
+
     blinkOnSend();
     LMIC_setTxData2(1, payload, sizeof(payload), 0);
-    Serial.println("Packet queued (8 bytes)");
+    Serial.println("Packet queued (9 bytes)");
 }
-// ==================== LoRaWAN 回调 ====================
+
+// ==================== LoRaWAN Event Callback ====================
 void onEvent(ev_t ev) {
     switch(ev) {
         case EV_TXSTART:
@@ -235,26 +240,30 @@ void onEvent(ev_t ev) {
                 if (cmd == 0xF1) {
                     triggerVibration(2);
                     Serial.println("Force vibrate command!");
-                } 
+                }
                 else if (cmd == 0xF2) {
-                    // 功能点1: 接收外部精准WBGT
-                    if (LMIC.dataLen >= 2) {
-                        externalWBGT = LMIC.frame[LMIC.dataBeg + 1] / 10.0f;
+                    if (LMIC.dataLen >= 3) {
+                        Serial.printf("Raw bytes: %02X %02X %02X\n",
+                            LMIC.frame[LMIC.dataBeg],
+                            LMIC.frame[LMIC.dataBeg+1],
+                            LMIC.frame[LMIC.dataBeg+2]);
+                        uint16_t wbgtRaw = (LMIC.frame[LMIC.dataBeg + 1] << 8) | LMIC.frame[LMIC.dataBeg + 2];
+                        externalWBGT = wbgtRaw / 10.0f;
                         lastExternalWBGTTime = millis();
                         Serial.print("External WBGT updated: ");
                         Serial.println(externalWBGT);
-                        determineHeatStress(); // 立即重新计算热应力
+                        determineHeatStress();
                     }
-                } 
+                }
                 else if (cmd == 0xF3) {
-                    // 功能点2: 调度中心人工下发解除报警信令
                     alarmMuted = true;
                     muteStartTime = millis();
-                    triggerVibration(0); // 立即停止震动
+                    externalWBGT = 0; // Clear external WBGT, fall back to local
+                    triggerVibration(0);
                     Serial.println("[DOWNLINK] Alarm manually dismissed by Control Centre.");
-                } 
+                }
                 else if (cmd == 0xF4) {
-                    // 功能点3: 基于云端复杂算法的补水提醒 (震动/闪烁3次)
+                    // Hydration reminder from cloud
                     triggerVibration(3);
                     Serial.println("[DOWNLINK] Personal hydration reminder received (3x pulses).");
                 }
@@ -265,19 +274,22 @@ void onEvent(ev_t ev) {
     }
 }
 
-// ==================== Task 1: 心率采样 (Core 1) ====================
+// ==================== Task 1: Heart Rate Sampling (Core 1) ====================
 void TaskBioMotion(void *pv) {
     for(;;) {
         long irValue = 0;
-        // 修复Bug 2: 跨核访问I2C总线必须加互斥锁，防止ESP32硬件I2C控制器死锁崩溃
+        // Mutex required: I2C is shared across cores
         if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(10))) {
             irValue = particleSensor.getIR();
             xSemaphoreGive(i2cMutex);
         }
 
         if (irValue < 50000) {
+            // No finger detected, reset readings
             beatAvg = 0;
             beatsPerMinute = 0;
+            for (byte x = 0; x < RATE_SIZE; x++) rates[x] = 0;
+            rateSpot = 0;
         } else {
             if (checkForBeat(irValue)) {
                 long delta = millis() - lastBeat;
@@ -293,17 +305,17 @@ void TaskBioMotion(void *pv) {
             }
         }
         updateLED();
-        vTaskDelay(pdMS_TO_TICKS(20)); // 50Hz
+        vTaskDelay(pdMS_TO_TICKS(20)); // 50Hz sampling
     }
 }
 
-// ==================== Task 2: 环境监测 (Core 0) ====================
+// ==================== Task 2: Environmental Monitoring (Core 0) ====================
 void TaskEnvironment(void *pv) {
     for(;;) {
         if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(100))) {
             airTemp = bme.readTemperature();
             humidity = bme.readHumidity();
-            skinTemp = simulateSkinTemp(); // TODO: 替换为真实 MLX90614
+            skinTemp = simulateSkinTemp(); // TODO: Replace with real MLX90614
             xSemaphoreGive(i2cMutex);
         }
 
@@ -318,11 +330,11 @@ void TaskEnvironment(void *pv) {
         Serial.print(" DI:"); Serial.print(DI);
         Serial.print(" Risk:"); Serial.println(currentRisk);
 
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        vTaskDelay(pdMS_TO_TICKS(10000)); // Read every 10 seconds
     }
 }
 
-// ==================== Task 3: LoRaWAN 通信 (Core 0) ====================
+// ==================== Task 3: LoRaWAN (removed, now in loop()) ====================
 void TaskCommunication(void *pv) {
     unsigned long startTime = millis();
 
@@ -332,12 +344,12 @@ void TaskCommunication(void *pv) {
         unsigned long now = millis();
 
         if (lastTxTime == 0 && (now - startTime > 20000)) {
-            lastTxTime = now; // 修复Bug 1: 发起发送前立即更新lastTxTime，防止下一毫秒重复触发
+            lastTxTime = now;
             do_send(&sendjob);
         }
 
         if (lastTxTime > 0 && (now - lastTxTime >= txInterval * 1000)) {
-            lastTxTime = now; // 修复Bug 1: 立即更新lastTxTime，防止疯狂打印 OP_TXRXPEND 风暴
+            lastTxTime = now;
             do_send(&sendjob);
         }
 
@@ -353,6 +365,9 @@ void setup() {
     Wire.setClock(100000);
 
     i2cMutex = xSemaphoreCreateMutex();
+
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
 
     if (!bme.begin(0x77)) {
         Serial.println("BME280 not found!");
@@ -379,13 +394,36 @@ void setup() {
     LMIC_selectSubBand(1);
     LMIC_setLinkCheckMode(0);
     LMIC.dn2Dr = DR_SF9;
+    LMIC.rxDelay = 1;
+    LMIC_setAdrMode(0);
+    LMIC_setClockError(MAX_CLOCK_ERROR * 20 / 100); // Allow 20% clock error tolerance
 
-    xTaskCreatePinnedToCore(TaskBioMotion,     "BioMotion",     4096, NULL, 2, NULL,            1);
-    xTaskCreatePinnedToCore(TaskEnvironment,   "Environment",   4096, NULL, 1, NULL,            0);
-    xTaskCreatePinnedToCore(TaskCommunication, "Communication", 8192, NULL, 3, &taskCommHandle, 0);
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, LOW);
+    xTaskCreatePinnedToCore(TaskBioMotion,   "BioMotion",   4096, NULL, 2, NULL, 1);
+    xTaskCreatePinnedToCore(TaskEnvironment, "Environment", 4096, NULL, 1, NULL, 0);
+
     Serial.println("Setup complete!");
 }
 
-void loop() {}
+unsigned long loopStartTime = 0;
+
+void loop() {
+    os_runloop_once();
+
+    unsigned long now = millis();
+
+    if (lastTxTime == 0 && loopStartTime == 0) {
+        loopStartTime = now;
+    }
+
+    // First TX after 20 seconds
+    if (lastTxTime == 0 && loopStartTime > 0 && (now - loopStartTime > 20000)) {
+        lastTxTime = now;
+        do_send(&sendjob);
+    }
+
+    // Subsequent TX every txInterval seconds
+    if (lastTxTime > 0 && (now - lastTxTime >= txInterval * 1000)) {
+        lastTxTime = now;
+        do_send(&sendjob);
+    }
+}
