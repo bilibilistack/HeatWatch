@@ -50,10 +50,20 @@ static const u4_t DEVADDR = 0x260D9A3E;
 #define DEMO_USB_POWER_ALWAYS_100 0
 
 
-// ---------- LED alarm ----------
+// ---------- LED / vibration indicator ----------
 #define ENABLE_LED_ALARM 1
+
+// External LED connected to GPIO4:
+// GPIO4 -> resistor -> LED long leg (+)
+// LED short leg (-) -> GND
 #define LED_PIN 4
 #define LED_ACTIVE_HIGH 1
+
+// Vibration / movement indicator thresholds.
+// These are only for LED display, not for fall detection.
+const float LED_VIBRATION_SVM_G   = 1.35f;
+const float LED_VIBRATION_DELTA_G = 0.12f;
+const unsigned long LED_VIBRATION_HOLD_MS = 800;
 
 
 // ================= FORWARD DECLARATIONS =================
@@ -215,6 +225,8 @@ bool impactHadRecentLowG = false;
 unsigned long lastLowGTime = 0;
 uint8_t latestRisk = 0;
 bool latestFallAlarm = false;
+// LED vibration indicator state
+unsigned long lastVibrationLedTime = 0;
 
 // ================= BATTERY VARIABLES =================
 static float battEma = NAN;
@@ -363,14 +375,31 @@ void enterState(FallState s) {
 
 void readAccel() {
   if (!lis_ok) return;
+
   sensors_event_t e;
   lis.getEvent(&e);
-  lastAx = e.acceleration.x; lastAy = e.acceleration.y; lastAz = e.acceleration.z;
+
+  lastAx = e.acceleration.x;
+  lastAy = e.acceleration.y;
+  lastAz = e.acceleration.z;
+
   float mag = sqrt(lastAx * lastAx + lastAy * lastAy + lastAz * lastAz);
   lastSvmG = mag / G;
-  if (hasPrevSvm) lastDeltaG = fabs(lastSvmG - prevSvmG);
-  else { lastDeltaG = 0; hasPrevSvm = true; }
+
+  if (hasPrevSvm) {
+    lastDeltaG = fabs(lastSvmG - prevSvmG);
+  } else {
+    lastDeltaG = 0;
+    hasPrevSvm = true;
+  }
+
   prevSvmG = lastSvmG;
+
+  // LED-only vibration indicator.
+  // This does not affect fall detection.
+  if (lastSvmG >= LED_VIBRATION_SVM_G || lastDeltaG >= LED_VIBRATION_DELTA_G) {
+    lastVibrationLedTime = millis();
+  }
 }
 
 bool isLowMotionNow() {
@@ -488,24 +517,44 @@ void updateFallStateMachine() {
   }
 }
 
+void ledWrite(bool on) {
+#if ENABLE_LED_ALARM
+  if (LED_ACTIVE_HIGH) {
+    digitalWrite(LED_PIN, on ? HIGH : LOW);
+  } else {
+    digitalWrite(LED_PIN, on ? LOW : HIGH);
+  }
+#endif
+}
+
 void updateLocalAlarm() {
 #if ENABLE_LED_ALARM
   static unsigned long lastBlink = 0;
   static bool ledState = false;
-  unsigned long now = millis();
-  bool alarmFast = latestFallAlarm;
-  bool alarmSlow = (!alarmFast && latestRisk >= 2);
 
-  if (!alarmFast && !alarmSlow) {
+  unsigned long now = millis();
+
+  // Power-saving design:
+  // LED stays off during normal operation.
+  // LED only blinks rapidly after a confirmed fall.
+  if (!latestFallAlarm) {
     digitalWrite(LED_PIN, LED_ACTIVE_HIGH ? LOW : HIGH);
     ledState = false;
     return;
   }
-  unsigned long interval = alarmFast ? 150 : 700;
+
+  // Confirmed fall: fast blink
+  const unsigned long interval = 120;
+
   if (now - lastBlink >= interval) {
     lastBlink = now;
     ledState = !ledState;
-    digitalWrite(LED_PIN, ledState ? (LED_ACTIVE_HIGH ? HIGH : LOW) : (LED_ACTIVE_HIGH ? LOW : HIGH));
+
+    digitalWrite(
+      LED_PIN,
+      ledState ? (LED_ACTIVE_HIGH ? HIGH : LOW)
+               : (LED_ACTIVE_HIGH ? LOW : HIGH)
+    );
   }
 #endif
 }
