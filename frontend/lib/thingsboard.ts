@@ -256,7 +256,7 @@ export async function sendRpcCommand(deviceId: string, method: string, params: a
     if (status === 409) {
       console.warn(`Device ${deviceId} is currently offline. Falling back to ThingsBoard Persistent RPC Queue...`);
       
-      const persistentRes = await fetch(`${baseUrl}/api/plugins/rpc/persistent/${deviceId}`, {
+      const persistentRes = await fetch(`${baseUrl}/api/plugins/rpc/oneway/${deviceId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,9 +265,7 @@ export async function sendRpcCommand(deviceId: string, method: string, params: a
         body: JSON.stringify({
           method: method,
           params: params,
-          additionalInfo: {
-            description: 'Queued via HeatWatch Control Console due to offline status'
-          }
+          persistent: true
         }),
         cache: 'no-store'
       });
