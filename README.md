@@ -109,11 +109,24 @@ The simulator implements the same edge-computing logic as the firmware:
 
 ---
 
-## 🏛 Backend Setup (ThingsBoard)
+## 🏛 ThingsBoard Cloud Setup (Production & Recommended)
 
-The system uses **ThingsBoard Community Edition** as the central IoT gateway and dashboard. It is containerized using Docker for easy deployment.
+The production stack utilizes the official **ThingsBoard Cloud** (SaaS) platform to host device streams, LoRaWAN decoders, and dashboard telemetry.
 
-### 🚀 Starting ThingsBoard
+### 🌐 ThingsBoard Cloud Configuration
+1.  **Platform URL**: Access the official cloud instance at [https://thingsboard.cloud](https://thingsboard.cloud).
+2.  **Authentication**: Use your tenant administration credentials (configured in `frontend/.env.local` to enable secure browser-to-server Next.js API proxy communication).
+3.  **Device Provisioning**:
+    *   Under the **Devices** section, register your wearables with the target type `heatstress-group10`.
+    *   Retrieve the **Device Access Token** from the device details view to configure your physical hardware nodes or the Python-based simulator.
+
+---
+
+## 🏛 Legacy Backend Setup (Local ThingsBoard CE via Docker)
+
+For developers wanting to host a local sandbox environment instead of using the online cloud SaaS, the local **ThingsBoard Community Edition** is containerized using Docker.
+
+### 🚀 Starting Local Sandbox (CE)
 1.  **Navigate to the backend directory**:
     ```bash
     cd backend
@@ -122,7 +135,7 @@ The system uses **ThingsBoard Community Edition** as the central IoT gateway and
     ```bash
     docker-compose up -d
     ```
-3.  **Access the Dashboard**:
+3.  **Access the Local Dashboard**:
     *   URL: `http://localhost:9090`
     *   Default Credentials:
         *   System Admin: `sysadmin@thingsboard.org` / `sysadmin`
