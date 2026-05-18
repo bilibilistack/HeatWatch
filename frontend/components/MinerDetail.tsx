@@ -221,7 +221,7 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
   const [rpcStatus, setRpcStatus] = useState<{ type: 'success' | 'error' | null; msg: string }>({ type: null, msg: '' });
 
   // Slider state for External WBGT (default to current HeatStressIndex or 28.0)
-  const [extWbgt, setExtWbgt] = useState<number>(HeatStressIndex > 0 ? parseFloat(HeatStressIndex.toFixed(1)) : 28.0);
+  const [extWbgt, setExtWbgt] = useState<number>(HeatStressIndex !== 0 ? parseFloat(HeatStressIndex.toFixed(1)) : 28.0);
 
   // Personalized parameters (Age, Height in cm, Weight in kg)
   const [age, setAge] = useState<number>(30);
@@ -730,13 +730,13 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
               <p className="ac-desc">{t.actionCalibrationDesc}</p>
               <div className="wbgt-slider-wrap">
                 <div className="slider-labels">
-                  <span>20.0°C</span>
+                  <span>-10.0°C</span>
                   <span className="slider-current num-text">{extWbgt.toFixed(1)}°C</span>
                   <span>45.0°C</span>
                 </div>
                 <input 
                   type="range" 
-                  min="20" 
+                  min="-10" 
                   max="45" 
                   step="0.1" 
                   value={extWbgt} 
