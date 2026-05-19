@@ -229,60 +229,49 @@ export async function getLatestTelemetry(deviceId: string): Promise<TelemetryVal
 }
 
 /**
- * Dispatches a one-way RPC command to a device.
- * Includes a robust fallback: if the device is currently offline (HTTP 409),
- * we automatically switch to ThingsBoard's Persistent Queue RPC API to stage the downlink.
+ * Dispatches a persistent one-way RPC command to a device.
+ * Since LoRaWAN LilyGo devices are duty-cycled and mostly sleeping/offline,
+ * we default directly to ThingsBoard's persistent RPC queue.
  */
 export async function sendRpcCommand(deviceId: string, method: string, params: any) {
   const baseUrl = process.env.THINGSBOARD_URL || 'https://thingsboard.cloud';
   const token = await getAuthToken();
 
-  // 1. Try real-time Oneway RPC
+  console.log(`Routing persistent RPC command to device ${deviceId}: method=${method}`);
+
   const response = await fetch(`${baseUrl}/api/plugins/rpc/oneway/${deviceId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ method, params }),
+    body: JSON.stringify({
+      method: method,
+      params: params,
+      persistent: true
+    }),
     cache: 'no-store'
   });
 
   if (!response.ok) {
     const status = response.status;
     const errText = await response.text();
-
-    // 2. If HTTP 409 (Conflict / Device Offline), automatically queue it in ThingsBoard's Persistent RPC queue!
-    if (status === 409) {
-      console.warn(`Device ${deviceId} is currently offline. Falling back to ThingsBoard Persistent RPC Queue...`);
-      
-      const persistentRes = await fetch(`${baseUrl}/api/plugins/rpc/oneway/${deviceId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          method: method,
-          params: params,
-          persistent: true
-        }),
-        cache: 'no-store'
-      });
-
-      if (persistentRes.ok) {
-        console.log(`Successfully queued persistent RPC command for device ${deviceId}`);
-        return { success: true, queued: true };
-      } else {
-        const persistentErr = await persistentRes.text();
-        throw new Error(`Failed to queue persistent RPC command (${persistentRes.status}): ${persistentErr}`);
-      }
-    }
-
-    throw new Error(`Failed to send RPC command (${status}): ${errText}`);
+    throw new Error(`Failed to queue persistent RPC command (${status}): ${errText}`);
   }
 
-  return { success: true, queued: false };
+  const responseText = await response.text();
+  let rpcId = 'N/A';
+  if (responseText) {
+    try {
+      const data = JSON.parse(responseText);
+      rpcId = data.rpcId || rpcId;
+    } catch (e) {
+      console.warn("Failed to parse response JSON from persistent RPC:", e);
+    }
+  }
+
+  console.log(`Successfully queued persistent RPC command for device ${deviceId}, rpcId: ${rpcId}`);
+  return { success: true, queued: true, rpcId: rpcId === 'N/A' ? undefined : rpcId };
 }
 
 export interface HistoryPoint {
