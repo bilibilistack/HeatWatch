@@ -346,7 +346,12 @@ void enterState(FallState s) {
 void readAccel() {
   if (!lis_ok) return;
   sensors_event_t e;
-  lis.getEvent(&e);
+  if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(10))) {
+    lis.getEvent(&e);
+    xSemaphoreGive(i2cMutex);
+  } else {
+    return;
+  }
   lastAx = e.acceleration.x;
   lastAy = e.acceleration.y;
   lastAz = e.acceleration.z;
@@ -511,9 +516,9 @@ void do_send(osjob_t* j) {
   payloadBin[7] = fl;
   payloadBin[8] = (uint8_t)constrain(beatAvg, 0, 255);
 
-  Serial.printf("TX T=%.1f H=%.1f W=%.1f Sk=%.1f R=%d F=%d BPM=%d BAT=%d%%\n",
+  Serial.printf("TX T=%.1f H=%.1f W=%.1f (LocW=%.1f ExtW=%.1f) Sk=%.1f R=%d F=%d BPM=%d BAT=%d%%\n",
                 (float)airTemp, (float)humidity, (float)effectiveWBGT,
-                (float)skinTemp, (int)currentRisk, fall, (int)beatAvg, bat);
+                (float)localWBGT, (float)externalWBGT, (float)skinTemp, (int)currentRisk, fall, (int)beatAvg, bat);
   if (axp_ok) {
     if (usb) Serial.printf("[USB] %.2fV %.1fmA\n",
                             axp.getVbusVoltage()/1000.0f, axp.getVbusCurrent());
@@ -630,9 +635,9 @@ void TaskEnvironment(void* pv) {
 
     determineHeatStress();
 
-    Serial.printf("ENV T=%.1f H=%.1f Sk=%.1f W=%.1f DI=%.1f R=%d BPM=%d\n",
+    Serial.printf("ENV T=%.1f H=%.1f Sk=%.1f W=%.1f (LocW=%.1f ExtW=%.1f) DI=%.1f R=%d BPM=%d\n",
                   (float)airTemp, (float)humidity, (float)skinTemp,
-                  (float)localWBGT, (float)DI, (int)currentRisk, (int)beatAvg);
+                  (float)effectiveWBGT, (float)localWBGT, (float)externalWBGT, (float)DI, (int)currentRisk, (int)beatAvg);
 
     vTaskDelay(pdMS_TO_TICKS(10000));
   }
@@ -658,6 +663,8 @@ void setup() {
 
   Wire.begin(I2C_SDA, I2C_SCL);
   Wire.setClock(100000);
+
+  i2cMutex = xSemaphoreCreateMutex();
 
   batteryBegin();  // AXP192: GPS off, LoRa on
 
@@ -691,8 +698,6 @@ void setup() {
     Serial.println("MAX30102 FAIL");
   }
 
-  i2cMutex = xSemaphoreCreateMutex();
-
   SPI.begin(5, 19, 27, 18);
   os_init();
   LMIC_reset();
@@ -708,7 +713,7 @@ void setup() {
   LMIC.rxDelay = 1;
   LMIC_setAdrMode(0);
   LMIC_setDrTxpow(DR_SF7, 14);
-  LMIC_setClockError(MAX_CLOCK_ERROR * 20 / 100);
+  LMIC_setClockError(MAX_CLOCK_ERROR * 80 / 100);
 
   xTaskCreatePinnedToCore(TaskBioMotion,   "Bio", 4096, NULL, 2, NULL, 1);
   xTaskCreatePinnedToCore(TaskEnvironment, "Env", 4096, NULL, 1, NULL, 0);
