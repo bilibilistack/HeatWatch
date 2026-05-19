@@ -60,7 +60,7 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "active",
-      "lastUpdateTs" : 1778704961561,
+      "lastUpdateTs" : 1779134305849,
       "longValue" : null,
       "strValue" : null
     }, {
@@ -68,42 +68,50 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "inactivityAlarmTime",
-      "lastUpdateTs" : 1778704961550,
-      "longValue" : 1778704961547,
+      "lastUpdateTs" : 1779134305845,
+      "longValue" : 1779134305841,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastActivityTime",
-      "lastUpdateTs" : 1778704334054,
-      "longValue" : 1778704333646,
+      "lastUpdateTs" : 1779133656584,
+      "longValue" : 1779133655138,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastConnectTime",
-      "lastUpdateTs" : 1778704207605,
-      "longValue" : 1778704207605,
+      "lastUpdateTs" : 1779133354203,
+      "longValue" : 1779133354203,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastDisconnectTime",
-      "lastUpdateTs" : 1778704333653,
-      "longValue" : 1778704333653,
+      "lastUpdateTs" : 1779133655153,
+      "longValue" : 1779133655153,
       "strValue" : null
     } ],
     "SHARED_SCOPE" : [ {
+      "booleanValue" : true,
+      "doubleValue" : null,
+      "jsonValue" : null,
+      "key" : "acknowledged",
+      "lastUpdateTs" : 1779124788924,
+      "longValue" : null,
+      "strValue" : null
+    }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "emgContact",
-      "lastUpdateTs" : 1778704207616,
+      "lastUpdateTs" : 1779119856362,
       "longValue" : null,
-      "strValue" : "04*****12"
+      "strValue" : "+61 400000000"
     }, {
       "booleanValue" : null,
       "doubleValue" : null,

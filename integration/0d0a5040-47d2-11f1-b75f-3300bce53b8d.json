@@ -30,14 +30,17 @@
     "debugMode" : false,
     "debugSettings" : {
       "allEnabled" : false,
-      "allEnabledUntil" : 1778157597037,
+      "allEnabledUntil" : 1779169629381,
       "failuresEnabled" : true
     },
     "defaultConverterId" : {
       "entityType" : "CONVERTER",
       "id" : "002a5f20-49d3-11f1-9234-b7886a2047b6"
     },
-    "downlinkConverterId" : null,
+    "downlinkConverterId" : {
+      "entityType" : "CONVERTER",
+      "id" : "da901f10-4f8c-11f1-aa03-0f0d95b4aecc"
+    },
     "edgeTemplate" : false,
     "enabled" : true,
     "externalId" : null,
@@ -84,7 +87,7 @@
       "doubleValue" : null,
       "jsonValue" : "{\"success\":true}",
       "key" : "integration_status_tb-ie-main-1",
-      "lastUpdateTs" : 1778157204642,
+      "lastUpdateTs" : 1779168730351,
       "longValue" : null,
       "strValue" : null
     } ]

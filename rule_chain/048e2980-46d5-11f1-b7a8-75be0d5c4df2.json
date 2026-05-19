@@ -32,12 +32,12 @@
       "type" : "Other"
     }, {
       "fromIndex" : 2,
-      "toIndex" : 5,
-      "type" : "RPC Request to Device"
-    }, {
-      "fromIndex" : 2,
       "toIndex" : 9,
       "type" : "Post telemetry"
+    }, {
+      "fromIndex" : 2,
+      "toIndex" : 10,
+      "type" : "RPC Request to Device"
     }, {
       "fromIndex" : 6,
       "toIndex" : 2,
@@ -185,8 +185,8 @@
       "type" : "org.thingsboard.rule.engine.action.TbLogNode"
     }, {
       "additionalInfo" : {
-        "layoutX" : 1000,
-        "layoutY" : 583
+        "layoutX" : 998,
+        "layoutY" : 567
       },
       "configuration" : {
         "timeoutInSeconds" : 60
@@ -292,6 +292,28 @@
       "ruleChainId" : null,
       "singletonMode" : false,
       "type" : "org.thingsboard.rule.engine.transform.TbTransformMsgNode"
+    }, {
+      "additionalInfo" : {
+        "description" : "",
+        "layoutX" : 779,
+        "layoutY" : 561
+      },
+      "configuration" : {
+        "integrationId" : "0d0a5040-47d2-11f1-b75f-3300bce53b8d"
+      },
+      "configurationVersion" : 0,
+      "createdTime" : 0,
+      "debugSettings" : null,
+      "externalId" : null,
+      "id" : {
+        "entityType" : "RULE_NODE",
+        "id" : "da69ff50-5343-11f1-8db5-c3197a5d8b3d"
+      },
+      "name" : "Integration Downlink",
+      "queueName" : null,
+      "ruleChainId" : null,
+      "singletonMode" : false,
+      "type" : "org.thingsboard.rule.engine.integration.TbIntegrationDownlinkNode"
     } ],
     "ruleChainConnections" : null
   },

@@ -1,0 +1,233 @@
+{
+  "entityType" : "DASHBOARD",
+  "entity" : {
+    "title" : "Mining Area A Devices",
+    "image" : null,
+    "mobileHide" : false,
+    "mobileOrder" : null,
+    "configuration" : {
+      "description" : "",
+      "widgets" : {
+        "35b141e0-593f-6d0f-394f-1ed58cf1f500" : {
+          "typeFullFqn" : "system.cards.entities_table",
+          "type" : "latest",
+          "sizeX" : 7.5,
+          "sizeY" : 6.5,
+          "config" : {
+            "showTitle" : true,
+            "backgroundColor" : "rgb(255, 255, 255)",
+            "color" : "rgba(0, 0, 0, 0.87)",
+            "padding" : "4px",
+            "settings" : {
+              "entitiesTitle" : "Devices",
+              "enableSearch" : true,
+              "enableSelectColumnDisplay" : false,
+              "enableStickyHeader" : true,
+              "enableStickyAction" : true,
+              "reserveSpaceForHiddenAction" : "true",
+              "displayEntityName" : false,
+              "displayEntityLabel" : false,
+              "displayEntityType" : false,
+              "displayPagination" : true,
+              "defaultPageSize" : 10,
+              "pageStepCount" : 3,
+              "pageStepIncrement" : 10,
+              "defaultSortOrder" : "displayName",
+              "useRowStyleFunction" : false
+            },
+            "title" : "Entities table",
+            "dropShadow" : true,
+            "enableFullscreen" : true,
+            "titleStyle" : {
+              "fontSize" : "16px",
+              "fontWeight" : 400,
+              "padding" : "5px 10px 5px 10px"
+            },
+            "showLegend" : false,
+            "datasources" : [ {
+              "type" : "entity",
+              "name" : "",
+              "entityAliasId" : "2e2f76be-0654-d2bb-8d91-747572cd5889",
+              "filterId" : null,
+              "dataKeys" : [ {
+                "name" : "displayName",
+                "type" : "entityField",
+                "label" : "Device ID",
+                "color" : "#2196f3",
+                "settings" : { }
+              }, {
+                "name" : "workerName",
+                "type" : "attribute",
+                "label" : "Worker Name",
+                "color" : "#f44336",
+                "settings" : { },
+                "decimals" : 0
+              }, {
+                "name" : "type",
+                "type" : "entityField",
+                "label" : "WBGT",
+                "color" : "#ffc107",
+                "settings" : { },
+                "decimals" : 0
+              } ],
+              "alarmFilterConfig" : {
+                "statusList" : [ "ACTIVE" ]
+              }
+            } ],
+            "configMode" : "basic",
+            "actions" : {
+              "cellClick" : [ ],
+              "actionCellButton" : [ {
+                "name" : "Force Vibration",
+                "icon" : "notifications_active",
+                "useShowWidgetActionFunction" : false,
+                "showWidgetActionFunction" : "return true;",
+                "type" : "custom",
+                "customFunction" : "widgetContext.http.post(\n    `/api/rpc/oneway/${entityId.id}`,\n    {\n        method: \"test\",\n        params: {}\n    }\n).subscribe(\n    () => widgetContext.showSuccessToast(\"RPC sent\"),\n    (err) => {\n        console.error(err);\n        widgetContext.showErrorToast(\n            JSON.stringify(err.error || err.message)\n        );\n    }\n);",
+                "openInSeparateDialog" : false,
+                "openInPopover" : false,
+                "id" : "c51e8d78-9ac0-5cf1-074a-bc96858c3189"
+              } ]
+            },
+            "showTitleIcon" : false,
+            "titleIcon" : "list",
+            "iconColor" : null,
+            "titleFont" : null,
+            "titleColor" : null,
+            "enableDataExport" : true
+          },
+          "row" : 0,
+          "col" : 0,
+          "id" : "35b141e0-593f-6d0f-394f-1ed58cf1f500"
+        },
+        "6c65192a-10ae-ce33-bb48-2dfdd2a632c8" : {
+          "typeFullFqn" : "system.control_widgets.rpc_debug_terminal",
+          "type" : "rpc",
+          "sizeX" : 9.5,
+          "sizeY" : 5.5,
+          "config" : {
+            "targetDeviceAliases" : [ ],
+            "showTitle" : true,
+            "backgroundColor" : "#010101",
+            "color" : "rgba(255, 254, 254, 0.87)",
+            "padding" : "0px",
+            "settings" : {
+              "requestTimeout" : 10000,
+              "requestPersistent" : false,
+              "persistentPollingInterval" : 5000
+            },
+            "title" : "RPC debug terminal",
+            "dropShadow" : true,
+            "enableFullscreen" : true,
+            "widgetStyle" : { },
+            "titleStyle" : {
+              "fontSize" : "16px",
+              "fontWeight" : 400
+            },
+            "showLegend" : false,
+            "actions" : { },
+            "datasources" : [ ],
+            "targetDevice" : {
+              "type" : "device",
+              "deviceId" : "b84f9170-4edc-11f1-befc-1dd22c41a268"
+            },
+            "showTitleIcon" : false,
+            "titleTooltip" : "",
+            "enableDataExport" : true,
+            "widgetCss" : "",
+            "pageSize" : 1024,
+            "noDataDisplayMessage" : "ada"
+          },
+          "row" : 0,
+          "col" : 0,
+          "id" : "6c65192a-10ae-ce33-bb48-2dfdd2a632c8"
+        }
+      },
+      "states" : {
+        "default" : {
+          "name" : "Mining Area A Devices",
+          "root" : true,
+          "layouts" : {
+            "main" : {
+              "widgets" : {
+                "35b141e0-593f-6d0f-394f-1ed58cf1f500" : {
+                  "sizeX" : 12,
+                  "sizeY" : 8,
+                  "row" : 0,
+                  "col" : 0
+                },
+                "6c65192a-10ae-ce33-bb48-2dfdd2a632c8" : {
+                  "sizeX" : 9,
+                  "sizeY" : 5,
+                  "row" : 8,
+                  "col" : 0
+                }
+              },
+              "gridSettings" : {
+                "layoutType" : "default",
+                "backgroundColor" : "#eeeeee",
+                "columns" : 24,
+                "margin" : 10,
+                "outerMargin" : true,
+                "backgroundSizeMode" : "100%"
+              }
+            }
+          }
+        }
+      },
+      "entityAliases" : {
+        "2e2f76be-0654-d2bb-8d91-747572cd5889" : {
+          "id" : "2e2f76be-0654-d2bb-8d91-747572cd5889",
+          "alias" : "Mining Area A Devices",
+          "filter" : {
+            "type" : "entityName",
+            "resolveMultiple" : true,
+            "entityType" : "DEVICE",
+            "entityNameFilter" : "A-0"
+          }
+        }
+      },
+      "filters" : { },
+      "timewindow" : {
+        "selectedTab" : 0,
+        "realtime" : {
+          "realtimeType" : 0,
+          "timewindowMs" : 3600000
+        },
+        "aggregation" : {
+          "type" : "NONE",
+          "limit" : 50000
+        }
+      },
+      "settings" : {
+        "stateControllerId" : "entity",
+        "showTitle" : false,
+        "showDashboardsSelect" : true,
+        "showEntitiesSelect" : true,
+        "showDashboardTimewindow" : true,
+        "showDashboardExport" : true,
+        "toolbarAlwaysOpen" : true
+      }
+    },
+    "name" : "Mining Area A Devices",
+    "resources" : null,
+    "assignedCustomers" : null,
+    "customerId" : {
+      "entityType" : "CUSTOMER",
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
+    },
+    "externalId" : null,
+    "id" : {
+      "entityType" : "DASHBOARD",
+      "id" : "03359070-52e0-11f1-991e-491f5f65ab20"
+    },
+    "ownerId" : {
+      "entityType" : "CUSTOMER",
+      "id" : "94f47050-487f-11f1-b7a8-75be0d5c4df2"
+    }
+  },
+  "relations" : [ ],
+  "attributes" : {
+    "SERVER_SCOPE" : [ ]
+  }
+}

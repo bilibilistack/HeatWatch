@@ -150,7 +150,7 @@
             "actions" : { },
             "configMode" : "basic",
             "alarmFilterConfig" : {
-              "statusList" : [ "ACTIVE", "CLEARED", "ACK", "UNACK" ],
+              "statusList" : [ "ACTIVE", "ACK", "UNACK" ],
               "severityList" : [ "CRITICAL", "WARNING" ],
               "typeList" : [ ],
               "searchPropagatedAlarms" : false,
