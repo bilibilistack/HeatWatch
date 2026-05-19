@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Heart, Thermometer, AlertTriangle, Droplet, 
-  Settings, Save, RefreshCw, VolumeX, ShieldAlert, Award, TrendingUp, Battery
+  Settings, Save, RefreshCw, VolumeX, ShieldAlert, Award, TrendingUp, Battery, Flame
 } from 'lucide-react';
 import { TelemetryValues } from '@/lib/thingsboard';
 import { translations, Language } from '@/lib/translations';
@@ -251,6 +251,7 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
   const [isResettingAlarm, setIsResettingAlarm] = useState(false);
   const [isSendingWbgt, setIsSendingWbgt] = useState(false);
   const [isSendingHydration, setIsSendingHydration] = useState(false);
+  const [isSendingEvacuation, setIsSendingEvacuation] = useState(false);
   const [rpcStatus, setRpcStatus] = useState<{ type: 'success' | 'error' | null; msg: string }>({ type: null, msg: '' });
 
   // Slider state for External WBGT (default to current HeatStressIndex or 28.0)
@@ -402,6 +403,30 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
       showStatus('error', t.statusHydrationFailed + e.message);
     } finally {
       setIsSendingHydration(false);
+    }
+  };
+
+  // RPC: Send Manual Evacuation Alarm (F1 Downlink)
+  const handleSendEvacuation = async () => {
+    setIsSendingEvacuation(true);
+    try {
+      // 0xF1 Downlink Force Evacuation Alert RPC call
+      const response = await fetch(`/api/devices/${deviceId}/rpc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'forceVibration', params: { command: 0xF1 } })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        showStatus('success', t.statusEvacuationSuccess);
+      } else {
+        throw new Error(data.error || '发送失败');
+      }
+    } catch (e: any) {
+      showStatus('error', t.statusEvacuationFailed + e.message);
+    } finally {
+      setIsSendingEvacuation(false);
     }
   };
 
@@ -884,6 +909,23 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
                   <><RefreshCw size={16} className="loader-icon" /> {t.actionHydratingBtn}</>
                 ) : (
                   <><Droplet size={16} /> {t.actionHydrationBtn}</>
+                )}
+              </button>
+            </div>
+
+            {/* 5. Emergency Evacuation Alert (F1) */}
+            <div className="action-card btn-evac-card">
+              <h3 className="ac-title" style={{ color: 'hsl(var(--color-critical))' }}><Flame size={18} /> {t.actionEvacuationTitle}</h3>
+              <p className="ac-desc">{t.actionEvacuationDesc}</p>
+              <button 
+                onClick={handleSendEvacuation} 
+                className="ac-btn btn-danger font-semibold w-full pulse-danger-glow"
+                disabled={isSendingEvacuation}
+              >
+                {isSendingEvacuation ? (
+                  <><RefreshCw size={16} className="loader-icon" /> {t.actionEvacuatingBtn}</>
+                ) : (
+                  <><ShieldAlert size={16} /> {t.actionEvacuationBtn}</>
                 )}
               </button>
             </div>
@@ -1408,6 +1450,23 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
         .pulse-safe-glow {
           box-shadow: 0 0 10px rgba(21, 128, 61, 0.2);
           animation: pulse-safe 2s infinite;
+        }
+
+        .pulse-danger-glow {
+          box-shadow: 0 0 10px rgba(220, 38, 38, 0.2);
+          animation: pulse-danger 1.5s infinite;
+        }
+
+        @keyframes pulse-safe {
+          0% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(21, 128, 61, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0); }
+        }
+
+        @keyframes pulse-danger {
+          0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
 
         .loader-icon {
