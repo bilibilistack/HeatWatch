@@ -29,7 +29,7 @@
       "entityType" : "DEVICE",
       "id" : "b84f9170-4edc-11f1-befc-1dd22c41a268"
     },
-    "label" : "A-001",
+    "label" : "",
     "name" : "A-001",
     "ownerId" : {
       "entityType" : "CUSTOMER",
@@ -50,7 +50,7 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "active",
-      "lastUpdateTs" : 1778699920301,
+      "lastUpdateTs" : 1779137847704,
       "longValue" : null,
       "strValue" : null
     }, {
@@ -58,42 +58,50 @@
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "inactivityAlarmTime",
-      "lastUpdateTs" : 1778699920292,
-      "longValue" : 1778699920289,
+      "lastUpdateTs" : 1779137847507,
+      "longValue" : 1779137847499,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastActivityTime",
-      "lastUpdateTs" : 1778699297361,
-      "longValue" : 1778699294884,
+      "lastUpdateTs" : 1779137231352,
+      "longValue" : 1779137228340,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastConnectTime",
-      "lastUpdateTs" : 1778698994498,
-      "longValue" : 1778698994498,
+      "lastUpdateTs" : 1779136249073,
+      "longValue" : 1779136249073,
       "strValue" : null
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
       "key" : "lastDisconnectTime",
-      "lastUpdateTs" : 1778699294890,
-      "longValue" : 1778699294890,
+      "lastUpdateTs" : 1779137228476,
+      "longValue" : 1779137228476,
       "strValue" : null
     } ],
     "SHARED_SCOPE" : [ {
       "booleanValue" : null,
       "doubleValue" : null,
       "jsonValue" : null,
+      "key" : "afaf",
+      "lastUpdateTs" : 1779136504163,
+      "longValue" : 210410,
+      "strValue" : null
+    }, {
+      "booleanValue" : null,
+      "doubleValue" : null,
+      "jsonValue" : null,
       "key" : "emgContact",
-      "lastUpdateTs" : 1778697464843,
+      "lastUpdateTs" : 1779121460107,
       "longValue" : null,
-      "strValue" : "04******"
+      "strValue" : "+61 400000000"
     }, {
       "booleanValue" : null,
       "doubleValue" : null,
