@@ -69,10 +69,11 @@ The core of the system is the **ESP32-TTGO** development board, which performs l
 HeatWatch/
 ├── edge/               # ESP32 firmware (Arduino framework)
 ├── backend/            # ThingsBoard configurations & MQTT scripts
+├── frontend/           # Next.js Supervisor Control Console (Dashboard UI)
 ├── simulator/          # Python-based device simulator & test tools
 ├── docs/               # Technical specifications and research
 ├── pyproject.toml      # Poetry dependency management
-└── README.md           # Project overview
+└── README.md           # Project master documentation
 ```
 
 ---
@@ -108,11 +109,24 @@ The simulator implements the same edge-computing logic as the firmware:
 
 ---
 
-## 🏛 Backend Setup (ThingsBoard)
+## 🏛 ThingsBoard Cloud Setup (Production & Recommended)
 
-The system uses **ThingsBoard Community Edition** as the central IoT gateway and dashboard. It is containerized using Docker for easy deployment.
+The production stack utilizes the official **ThingsBoard Cloud** (SaaS) platform to host device streams, LoRaWAN decoders, and dashboard telemetry.
 
-### 🚀 Starting ThingsBoard
+### 🌐 ThingsBoard Cloud Configuration
+1.  **Platform URL**: Access the official cloud instance at [https://thingsboard.cloud](https://thingsboard.cloud).
+2.  **Authentication**: Use your tenant administration credentials (configured in `frontend/.env.local` to enable secure browser-to-server Next.js API proxy communication).
+3.  **Device Provisioning**:
+    *   Under the **Devices** section, register your wearables with the target type `heatstress-group10`.
+    *   Retrieve the **Device Access Token** from the device details view to configure your physical hardware nodes or the Python-based simulator.
+
+---
+
+## 🏛 Legacy Backend Setup (Local ThingsBoard CE via Docker)
+
+For developers wanting to host a local sandbox environment instead of using the online cloud SaaS, the local **ThingsBoard Community Edition** is containerized using Docker.
+
+### 🚀 Starting Local Sandbox (CE)
 1.  **Navigate to the backend directory**:
     ```bash
     cd backend
@@ -121,7 +135,7 @@ The system uses **ThingsBoard Community Edition** as the central IoT gateway and
     ```bash
     docker-compose up -d
     ```
-3.  **Access the Dashboard**:
+3.  **Access the Local Dashboard**:
     *   URL: `http://localhost:9090`
     *   Default Credentials:
         *   System Admin: `sysadmin@thingsboard.org` / `sysadmin`
@@ -136,4 +150,39 @@ ThingsBoard allows for deep customization:
 
 ---
 
-## 📂 Project Structure
+## 🖥️ Next.js Supervisor Control Console
+
+A state-of-the-art, high-end web dashboard built using **Next.js** and **React** is located in the `frontend/` directory. It interfaces with the ThingsBoard Cloud API to provide supervisors with a real-time, premium monitoring console.
+
+### ✨ Key Dashboard Features
+- **Pilbara Sandstone Aesthetic**: Designed with a high-fidelity light-mode color palette inspired by the Western Australian mining region (Outback Sandstone Sand and Clay HSL gradients).
+- **Full Bilingual Localization**: Interactive language selector supporting English (EN) and Simplified Chinese (ZH) across all telemetry grids, action buttons, and physiological ratings.
+- **Dynamic Wearable Status Cards**:
+  - Displays body/ambient temperature split (e.g. `36.5 / 24.5 °C`), dynamic risk indicators, and edge Wet-Bulb Globe Temperature (WBGT).
+  - Built-in hardware-accelerated **double flashing fall warning indicator (⚠️ 摔倒感叹号)** that pulses red with audio-visual cues during emergency fall events.
+  - Smart battery level normalizer handling both integer and fractional telemetry.
+- **Telemetry Inspector Detail Drawer**:
+  - Interactive SVG historical trend line graph rendering the last 30 minutes of telemetry for selected metrics (Heat Stress WBGT, Skin Temp, Ambient Temp, Discomfort Index, Heart Rate).
+  - Hover-based crosshairs displaying exact data points and UTC-local synced timestamps.
+  - **Uplink Network Diagnostic Card**: Shows the absolute received local timestamp and relative freshness indicator (e.g. `(3 mins ago)`) of the latest packet pushed to the gateway, powered by a custom ThingsBoard parser that ignores empty placeholders and captures true hardware transmission times.
+  - **Biometric Calibration & Hydration Advisor**: Dynamically adjusts personal safe WBGT thresholds based on age and BMI, featuring interactive haptic downlink RPC command relays (Mute, Hydrate vibration).
+
+### ⚙️ Getting Started (Frontend)
+1. **Navigate to the frontend directory**:
+   ```bash
+   cd frontend
+   ```
+2. **Configure environment variables**: Copy the template and fill in your ThingsBoard Tenant credentials:
+   ```bash
+   cp .env.example .env.local
+   ```
+3. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+4. **Launch development server**:
+   ```bash
+   npm run dev
+   ```
+5. **Access the Console**: Open [http://localhost:3000](http://localhost:3000) in your web browser.
+

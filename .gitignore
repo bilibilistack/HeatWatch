@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Exempt frontend lib/ from Python's global lib/ ignore rule
+!frontend/lib/
