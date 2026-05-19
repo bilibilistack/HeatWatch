@@ -92,7 +92,6 @@ const unsigned long MUTE_DURATION = 10UL * 60 * 1000;
 volatile float estimatedTc = 37.0f;
 volatile float currentPSI = 0.0f;
 volatile float cumulativeHeatStrain = 0.0f;
-volatile bool firstTcCalculated = false;
 
 volatile unsigned long txInterval = 60;
 unsigned long lastTxTime = 0;
@@ -220,22 +219,17 @@ void determineHeatStress() {
                       ? (float)beatAvg
                       : 70.0f; // 无效心率或传感器脱落时，代入静息心率 70 bpm
 
-  // 3. 首次开机采样时，直接将核心温度设为 skinTemp + 4.0f 以消除爬升延迟
-  if (!firstTcCalculated) {
-    estimatedTc = skinTemp + 4.0f;
-    firstTcCalculated = true;
-  }
-
-  // 4. 计算散热受阻惩罚系数 (eta)
+  // 3. 计算散热受阻惩罚系数 (eta)
   float wetBulb = calcStullWetBulb(airTemp, humidity);
   float deltaEvap = estimatedTc - wetBulb;
   float eta =
       constrain(deltaEvap / 17.0f, 0.1f,
                 1.0f); // 17.0f 表示核心温度37°C与舒适温湿球温度20°C的温差基准
 
-  // 5. 核心体温一阶微分方程更新 (delta_t = 10s)
+  // 4. 核心体温一阶微分方程更新 (delta_t = 10s)
   float dTc = 0.000286f * hrInput - 0.005f * eta * (estimatedTc - skinTemp);
   estimatedTc += 10.0f * dTc;
+  estimatedTc = constrain(estimatedTc, 35.0f, 42.0f); // 安全防护：限制核心温度在物理合理范围内
 
   // 6. Moran 生理应激指数 (PSI) 计算 (防漏报双模式)
   float tcTerm = (estimatedTc - 37.0f) / 2.5f;
