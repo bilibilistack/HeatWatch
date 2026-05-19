@@ -154,7 +154,7 @@ bool latestFallAlarm = false;
 
 // ================= LORA =================
 static osjob_t sendjob;
-static uint8_t payloadBin[9];
+static uint8_t payloadBin[20];
 
 // ================= FORWARD DECLARATIONS =================
 void do_send(osjob_t *j);
@@ -570,19 +570,32 @@ void do_send(osjob_t *j) {
   bool fall = pendingFallAlert;
   pendingFallAlert = false;
 
-  // 9-byte binary payload:
-  // [0-1] temp  ×10  int16
-  // [2]   hum   ×2   uint8
-  // [3-4] WBGT  ×10  int16
-  // [5]   risk       uint8  0=normal 1=warn 2=critical
-  // [6]   bat%       uint8
-  // [7]   flags      uint8  b0=fall b1=usb b2=active b[7:5]=ver(1)
-  // [8]   BPM        uint8
+  // 20-byte binary payload:
+  // [0-1]   Air Temp   ×10  int16
+  // [2]     Humidity   ×2   uint8
+  // [3-4]   Eff. WBGT  ×10  int16
+  // [5]     Risk Level      uint8 (0=normal 1=warn 2=critical)
+  // [6]     Battery %       uint8
+  // [7]     Flags           uint8 (b0=fall b1=usb b2=active b[7:5]=ver(1))
+  // [8]     BPM             uint8
+  // [9-10]  Local WBGT ×10  int16
+  // [11-12] Ext. WBGT  ×10  int16
+  // [13-14] Skin Temp  ×10  int16
+  // [15-16] Est. Tc    ×10  int16
+  // [17]    PSI        ×10  uint8
+  // [18-19] CHS        ×10  uint16
 
   int16_t t16 = (int16_t)constrain(lroundf(airTemp * 10), -32768, 32767);
   int16_t w16 = (int16_t)constrain(lroundf(effectiveWBGT * 10), -32768, 32767);
   uint8_t h8 = (uint8_t)constrain((int)lroundf(humidity * 2), 0, 200);
   uint8_t fl = (fall ? 1 : 0) | (usb ? 2 : 0) | 0x04 | (1u << 5);
+
+  int16_t locW16 = (int16_t)constrain(lroundf(localWBGT * 10), -32768, 32767);
+  int16_t extW16 = (int16_t)constrain(lroundf(externalWBGT * 10), -32768, 32767);
+  int16_t sk16 = (int16_t)constrain(lroundf(skinTemp * 10), -32768, 32767);
+  int16_t tc16 = (int16_t)constrain(lroundf(estimatedTc * 10), -32768, 32767);
+  uint8_t psi8 = (uint8_t)constrain(lroundf(currentPSI * 10), 0, 255);
+  uint16_t chs16 = (uint16_t)constrain(lroundf(cumulativeHeatStrain * 10), 0, 65535);
 
   payloadBin[0] = (uint8_t)((uint16_t)t16 >> 8);
   payloadBin[1] = (uint8_t)((uint16_t)t16 & 0xFF);
@@ -593,6 +606,23 @@ void do_send(osjob_t *j) {
   payloadBin[6] = bat;
   payloadBin[7] = fl;
   payloadBin[8] = (uint8_t)constrain(beatAvg, 0, 255);
+
+  payloadBin[9] = (uint8_t)((uint16_t)locW16 >> 8);
+  payloadBin[10] = (uint8_t)((uint16_t)locW16 & 0xFF);
+
+  payloadBin[11] = (uint8_t)((uint16_t)extW16 >> 8);
+  payloadBin[12] = (uint8_t)((uint16_t)extW16 & 0xFF);
+
+  payloadBin[13] = (uint8_t)((uint16_t)sk16 >> 8);
+  payloadBin[14] = (uint8_t)((uint16_t)sk16 & 0xFF);
+
+  payloadBin[15] = (uint8_t)((uint16_t)tc16 >> 8);
+  payloadBin[16] = (uint8_t)((uint16_t)tc16 & 0xFF);
+
+  payloadBin[17] = psi8;
+
+  payloadBin[18] = (uint8_t)(chs16 >> 8);
+  payloadBin[19] = (uint8_t)(chs16 & 0xFF);
 
   Serial.printf("TX T=%.1f H=%.1f W=%.1f (LocW=%.1f ExtW=%.1f) Sk=%.1f R=%d "
                 "F=%d BPM=%d BAT=%d%% Tc=%.1f PSI=%.1f CHS=%.1f\n",
@@ -610,7 +640,7 @@ void do_send(osjob_t *j) {
   }
 
   LMIC_setTxData2(1, payloadBin, sizeof(payloadBin), 0);
-  Serial.println("Queued 9B");
+  Serial.println("Queued 20B");
 }
 
 void onEvent(ev_t ev) {
