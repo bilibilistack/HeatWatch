@@ -284,3 +284,69 @@ All five onboard devices communicate via a single shared I2C bus (`Wire`).
 * **Conflict**: Concurrent access from Core 1 (`TaskBioMotion`) and Core 0 (`TaskEnvironment`) causes I2C state collisions and hardware crashes.
 * **Mutex**: A global semaphore `i2cMutex` synchronizes access. Before writing or reading, tasks must successfully query `xSemaphoreTake(...)` and release the lock via `xSemaphoreGive(...)` immediately afterwards.
 
+---
+
+## 8. 功耗管理与智能节能策略 / Power Management & Intelligent Energy-Saving Strategy
+
+为了将设备部署寿命从不到 3 天提高到接近 10 天，固件在开机 30 分钟后将自动从全速的“演示模式”切换为周期性的“省电模式”。
+To extend the deployment battery life from less than 3 days to nearly 10 days, the firmware automatically transitions from the continuous "Demo Mode" to a duty-cycled "Power-Saving Mode" 30 minutes after boot.
+
+### 8.1 功耗模型与对比分析 / Power Consumption Model & Comparative Analysis
+
+#### A. 各组件功耗特征 / Power Draw Profile per Component:
+* **ESP32 MCU (主控)**:
+  * 正常工作电流 / Active Current: $\approx 45\text{ mA}$
+  * 轻度睡眠电流 / Light Sleep Current: $\approx 0.8\text{ mA}$
+* **MAX30102 (心率传感器)**:
+  * 正常采样电流 / Active PPG Current: $\approx 2.5\text{ mA}$
+  * 软件关断电流 / Shutdown Current: $\approx 0.7\ \mu\text{A}$ (Register `0x02` write `0x01`)
+* **MLX90614 (皮温传感器)**:
+  * 正常采样电流 / Active Current: $\approx 1.5\text{ mA}$
+  * 低功耗休眠电流 / Sleep Current: $\approx 150\ \mu\text{A}$ (I2C sleep command)
+* **BME280 (环温湿度传感器)**:
+  * Forced 单次测量 / Active: $\approx 350\ \mu\text{A}$
+  * 软件休眠电流 / Sleep: $\approx 0.2\ \mu\text{A}$
+* **LIS3DH (加速度计)**:
+  * 正常运行电流 / Active: $\approx 20\ \mu\text{A}$ (100Hz ODR)
+* **LoRa 发射模块 (SX1276)**:
+  * 每 90 秒发射一次（发射 120mA 持续 1s，接收 12mA 持续 2s）折合的平均功耗 / Avg LoRa current over 90s interval: $\approx 1.6\text{ mA}$
+
+#### B. 整机平均电流与续航对比 / Overall Current & Battery Life Comparison:
+基于标准的 $3400\text{ mAh}$ 18650 锂离子电池进行评估：
+Based on a standard $3400\text{ mAh}$ 18650 Li-ion battery:
+
+1. **现有高频轮询模式 (Demo Mode)**:
+   * **总平均电流 / Total Avg Current**: $\approx 50.62\text{ mA}$
+   * **电池寿命 / Battery Life**: **约 67 小时 (2.8 天) / ~67 hours (2.8 days)**
+2. **新增低功耗模式 (Power-Saving Mode)**:
+   * **MAX30102 心率**: 每分钟工作 15 秒，关断 45 秒。平均电流 / Avg Current: $\approx 0.625\text{ mA}$
+   * **MLX90614 皮温**: 每分钟工作 5 秒，休眠 55 秒。平均电流 / Avg Current: $\approx 0.263\text{ mA}$
+   * **ESP32 MCU**: 在后 45 秒心率休眠期间，由于无高频心率计算需求，且 LIS3DH 处于硬件中断待命状态，`TaskBioMotion` 的轮询周期从 $20\text{ ms}$ (50Hz) 放宽至 **$200\text{ ms}$** (5Hz)。极低频的唤醒使主控大部分时间处于轻度睡眠。平均电流 / Avg Current: $\approx 11.85\text{ mA}$
+   * **总平均电流 / Total Avg Current**: $\approx 14.36\text{ mA}$
+   * **电池寿命 / Battery Life**: **约 237 小时 (9.8 天) / ~237 hours (9.8 days)**
+   * **省电效率 / Energy Saved**: **约 71.6% / ~71.6%**
+
+---
+
+### 8.2 智能混合节能机制 / Intelligent Hybrid Power-Saving Mechanism
+
+#### 1. 开机延时演示模式 / Boot-Delay Demo Mode
+设备开机前 30 分钟（`millis() < 1,800,000`）强行保持演示模式。传感器全速采样，前端界面实时刷新，以便技术团队进行现场展示与功能调试。
+For the first 30 minutes of uptime, the device is locked in Demo Mode with continuous high-frequency sampling to facilitate live display and commissioning.
+
+#### 2. 周期性间歇休眠 / Duty-Cycled Sampling
+开机超过 30 分钟且没有发生跌倒警报时，系统以 60 秒为大周期自动循环：
+* **心率采样窗口**：前 15 秒工作，后 45 秒关闭 MAX30102 激光发射，将任务延迟周期挂起至 $200\text{ ms}$。
+* **温度采样窗口**：前 10 秒（环境任务 10s 延时）内执行一次传感器读取，后 50 秒直接跳过 I2C 传输，复用上一周期的内存值。
+* **数据连续性保证**：在传感器休眠期间，LoRa 发送包会使用**休眠前锁存的最后一次有效平均值**，防止后端看板的趋势曲线归零或断崖。
+
+After 30 minutes, the device enters a 60-second cycle: MAX30102 runs for 15s then shuts down; BME280/MLX90614 are read once per minute. To prevent telemetry telemetry charts from dropping to zero, uplinks use the last latched valid sensor values during sleep intervals.
+
+#### 3. 跌倒事件触发回弹 / Fall-Triggered Switchback
+当 LIS3DH 监测到瞬时冲击拉高 GPIO25 中断，进入跌倒报警状态（`STATE_FALL_DETECTED`）后：
+* 系统自动记录当前时间戳 `lastFallTriggerTime = millis()`。
+* **强制切回演示模式 5 分钟**：这让救援人员在突发紧急状况下，能持续获得高频更新的病患心率和核心体温数据。5 分钟无异常后，设备再次自动切回省电模式。
+
+If a fall is confirmed (`STATE_FALL_DETECTED`), the system sets `lastFallTriggerTime = millis()`, forcing the device back to high-frequency Demo Mode for 5 minutes. This ensures dense health monitoring during an emergency before returning to low-power mode.
+
+

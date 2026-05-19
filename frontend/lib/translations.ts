@@ -45,7 +45,7 @@ export const translations = {
     cardSecondsAgo: '秒前',
     cardMinutesAgo: '分钟前',
     cardOfflineWarning: '设备可能已断联',
-    cardSkinAmbientTemp: '体温 / 环境温度',
+    cardCoreAmbientTemp: '核心温度 Tc / 环境',
     cardRiskLevel: '风险等级',
     
     // Detail Drawer
@@ -55,6 +55,11 @@ export const translations = {
     detailPhysiologyTitle: '矿工生理状态',
     detailHeartRateAvg: '心率 (Avg)',
     detailSkinTemp: '体表温度',
+    detailCoreTemp: '核心温度 (Tc)',
+    detailPSI: '生理应激指数 (PSI)',
+    detailPSIDesc: '即时生理热应力指标 (0-10)。评估心率和核心体温偏离静息状态的相对幅度，数值越大负荷越高。',
+    detailCHS: '累积热应变蓄积量 (CHS)',
+    detailCHSDesc: '人体在作业期间累积的总热剂量。在 PSI > 3.0（开始出现热负荷）时持续增加。',
     detailEnvironmentTitle: '作业环境指标',
     detailRelativeHumidity: '相对湿度',
     detailDiscomfortIndex: '不舒适指数 (DI)',
@@ -143,7 +148,7 @@ export const translations = {
     cardSecondsAgo: 's ago',
     cardMinutesAgo: 'm ago',
     cardOfflineWarning: 'Device might be disconnected',
-    cardSkinAmbientTemp: 'Skin / Ambient Temp',
+    cardCoreAmbientTemp: 'Core Temp Tc / Ambient',
     cardRiskLevel: 'Risk Level',
     
     // Detail Drawer
@@ -153,6 +158,11 @@ export const translations = {
     detailPhysiologyTitle: 'Miner Vitals',
     detailHeartRateAvg: 'Heart Rate (Avg)',
     detailSkinTemp: 'Skin Temp',
+    detailCoreTemp: 'Core Temp (Tc)',
+    detailPSI: 'Physiological Strain Index (PSI)',
+    detailPSIDesc: 'Instantaneous physiological heat load (0-10). Combines deviation of heart rate and core temperature from baseline.',
+    detailCHS: 'Cumulative Heat Strain (CHS)',
+    detailCHSDesc: 'Accumulated thermal strain dose during shift. Integrates over time whenever PSI > 3.0.',
     detailEnvironmentTitle: 'Environmental Index',
     detailRelativeHumidity: 'Humidity',
     detailDiscomfortIndex: 'Discomfort Index (DI)',

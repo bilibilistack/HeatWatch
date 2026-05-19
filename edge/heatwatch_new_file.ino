@@ -95,6 +95,19 @@ volatile float estimatedTc = 37.0f;
 volatile float currentPSI = 0.0f;
 volatile float cumulativeHeatStrain = 0.0f;
 
+volatile unsigned long lastFallTriggerTime = 0;
+bool max30102_is_sleeping = false;
+
+bool isPowerSavingMode() {
+  if (millis() < 1800000) { // 30 minutes demo mode
+    return false;
+  }
+  if (lastFallTriggerTime > 0 && (millis() - lastFallTriggerTime < 300000)) { // 5 minutes demo extension on fall
+    return false;
+  }
+  return true;
+}
+
 volatile unsigned long txInterval = 60;
 unsigned long lastTxTime = 0;
 unsigned long loopStartTime = 0;
@@ -399,8 +412,11 @@ void enterState(FallState s) {
     postAxSum = postAySum = postAzSum = 0;
     postOrientationSamples = 0;
   }
-  if (s == STATE_FALL_DETECTED)
+  if (s == STATE_FALL_DETECTED) {
     latestFallAlarm = true;
+    lastFallTriggerTime = millis();
+    Serial.println("[POWER] Fall detected! Switching back to Demo Mode for 5 minutes.");
+  }
   if (s == STATE_IDLE)
     latestFallAlarm = false;
 }
@@ -695,29 +711,79 @@ void onEvent(ev_t ev) {
 // Core 1 — MAX30102 心率 + LIS3DH 跌倒检测 (20ms)
 void TaskBioMotion(void *pv) {
   for (;;) {
-    // 心率
-    long irValue = 0;
-    if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(10))) {
-      irValue = particleSensor.getIR();
-      xSemaphoreGive(i2cMutex);
+    bool heartRateActive = true;
+    unsigned long delayMs = SAMPLE_INTERVAL_MS;
+
+    if (isPowerSavingMode()) {
+      unsigned long cycleTime = millis() % 60000;
+      if (cycleTime >= 15000) {
+        // Sleep window: 15s to 60s (45 seconds duration)
+        heartRateActive = false;
+        if (!max30102_is_sleeping) {
+          if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(50))) {
+            particleSensor.shutDown();
+            xSemaphoreGive(i2cMutex);
+            max30102_is_sleeping = true;
+            Serial.println("[POWER] MAX30102 entered Low-Power shutdown.");
+          }
+        }
+        
+        // Scale task delay if we are not actively tracking a fall
+        if (fallState == STATE_IDLE) {
+          delayMs = 200;
+        }
+      } else {
+        // Active window: 0s to 15s
+        if (max30102_is_sleeping) {
+          if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(50))) {
+            particleSensor.wakeUp();
+            // Clear rates array to avoid legacy noise or sudden spikes from wakeup
+            for (byte x = 0; x < RATE_SIZE; x++) rates[x] = 0;
+            rateSpot = 0;
+            beatsPerMinute = 0;
+            xSemaphoreGive(i2cMutex);
+            max30102_is_sleeping = false;
+            Serial.println("[POWER] MAX30102 woke up for active sampling.");
+          }
+        }
+      }
+    } else {
+      // Normal/Demo Mode: Ensure MAX30102 is active
+      if (max30102_is_sleeping) {
+        if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(50))) {
+          particleSensor.wakeUp();
+          xSemaphoreGive(i2cMutex);
+          max30102_is_sleeping = false;
+          Serial.println("[POWER] Demo Mode: MAX30102 forced active.");
+        }
+      }
     }
-    if (irValue < 50000) {
-      beatAvg = 0;
-      beatsPerMinute = 0;
-      for (byte x = 0; x < RATE_SIZE; x++)
-        rates[x] = 0;
-      rateSpot = 0;
-    } else if (checkForBeat(irValue)) {
-      long delta = millis() - lastBeat;
-      lastBeat = millis();
-      beatsPerMinute = 60.0f / (delta / 1000.0f);
-      if (beatsPerMinute > 20 && beatsPerMinute < 255) {
-        rates[rateSpot++] = (byte)beatsPerMinute;
-        rateSpot %= RATE_SIZE;
+
+    if (heartRateActive) {
+      // 心率
+      long irValue = 0;
+      if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(10))) {
+        irValue = particleSensor.getIR();
+        xSemaphoreGive(i2cMutex);
+      }
+      if (irValue < 50000) {
         beatAvg = 0;
+        beatsPerMinute = 0;
         for (byte x = 0; x < RATE_SIZE; x++)
-          beatAvg += rates[x];
-        beatAvg /= RATE_SIZE;
+          rates[x] = 0;
+        rateSpot = 0;
+      } else if (checkForBeat(irValue)) {
+        long delta = millis() - lastBeat;
+        lastBeat = millis();
+        beatsPerMinute = 60.0f / (delta / 1000.0f);
+        if (beatsPerMinute > 20 && beatsPerMinute < 255) {
+          rates[rateSpot++] = (byte)beatsPerMinute;
+          rateSpot %= RATE_SIZE;
+          beatAvg = 0;
+          for (byte x = 0; x < RATE_SIZE; x++)
+            beatAvg += rates[x];
+          beatAvg /= RATE_SIZE;
+        }
       }
     }
 
@@ -725,30 +791,40 @@ void TaskBioMotion(void *pv) {
     readAccel();
     updateFallStateMachine();
 
-    vTaskDelay(pdMS_TO_TICKS(SAMPLE_INTERVAL_MS));
+    vTaskDelay(pdMS_TO_TICKS(delayMs));
   }
 }
 
 // Core 0 — BME280 + MLX90614 + 热应力判定 (10s)
 void TaskEnvironment(void *pv) {
   for (;;) {
-    if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(100))) {
-      if (bme_ok) {
-        float t = bme.readTemperature();
-        float h = bme.readHumidity();
-        if (!isnan(t) && t > -10.0f && t < 60.0f)
-          airTemp = t;
-        if (!isnan(h) && h >= 0.0f && h <= 100.0f)
-          humidity = h;
+    bool readSensors = true;
+    if (isPowerSavingMode()) {
+      unsigned long cycleTime = millis() % 60000;
+      if (cycleTime >= 10000) {
+        readSensors = false;
       }
-      if (mlx_ok) {
-        float obj = mlx.readObjectTempC();
-        // 基本有效性过滤：正常体表温度范围 30–42°C
-        if (!isnan(obj) && obj > 30.0f && obj < 42.0f) {
-          skinTemp = obj;
+    }
+
+    if (readSensors) {
+      if (xSemaphoreTake(i2cMutex, pdMS_TO_TICKS(100))) {
+        if (bme_ok) {
+          float t = bme.readTemperature();
+          float h = bme.readHumidity();
+          if (!isnan(t) && t > -10.0f && t < 60.0f)
+            airTemp = t;
+          if (!isnan(h) && h >= 0.0f && h <= 100.0f)
+            humidity = h;
         }
+        if (mlx_ok) {
+          float obj = mlx.readObjectTempC();
+          // 基本有效性过滤：正常体表温度范围 30–42°C
+          if (!isnan(obj) && obj > 30.0f && obj < 42.0f) {
+            skinTemp = obj;
+          }
+        }
+        xSemaphoreGive(i2cMutex);
       }
-      xSemaphoreGive(i2cMutex);
     }
 
     determineHeatStress();

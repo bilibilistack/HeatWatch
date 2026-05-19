@@ -37,8 +37,15 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
     riskLevel = 0,
     fallDetected = false,
     battery = 0,
-    lastUpdateTs
+    lastUpdateTs,
+    tc = 0,
+    psi = 0,
+    chs = 0
   } = telemetry;
+
+  const displayTc = tc > 0 ? tc : (skinTemp > 0 ? skinTemp + 4.0 : 37.0);
+  const displayPsi = psi > 0 ? psi : 0;
+  const displayChs = chs > 0 ? chs : 0;
 
   const t = translations[lang];
 
@@ -71,7 +78,9 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
   // History trend state & dynamic metric configuration
   const [history, setHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
-  const [selectedMetric, setSelectedMetric] = useState<'HeatStressIndex' | 'skinTemp' | 'ambientTemp' | 'discomfortIndex' | 'heartRateAvg'>('HeatStressIndex');
+  const [selectedMetric, setSelectedMetric] = useState<
+    'HeatStressIndex' | 'skinTemp' | 'ambientTemp' | 'discomfortIndex' | 'heartRateAvg' | 'tc' | 'psi' | 'chs'
+  >('HeatStressIndex');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const metricConfig = {
@@ -84,12 +93,36 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
       gradientId: 'grad-wbgt'
     },
     skinTemp: {
-      btnLabel: lang === 'zh' ? '体温' : 'Skin Temp',
+      btnLabel: lang === 'zh' ? '皮温' : 'Skin Temp',
       minY: 32,
       maxY: 42,
       unit: '°C',
       color: 'hsl(var(--color-accent))',
       gradientId: 'grad-skin'
+    },
+    tc: {
+      btnLabel: lang === 'zh' ? '核温 (Tc)' : 'Core Temp (Tc)',
+      minY: 34,
+      maxY: 42,
+      unit: '°C',
+      color: '#ea580c',
+      gradientId: 'grad-tc'
+    },
+    psi: {
+      btnLabel: lang === 'zh' ? '应激 (PSI)' : 'Strain (PSI)',
+      minY: 0,
+      maxY: 10,
+      unit: '',
+      color: '#eab308',
+      gradientId: 'grad-psi'
+    },
+    chs: {
+      btnLabel: lang === 'zh' ? '蓄积 (CHS)' : 'Fatigue (CHS)',
+      minY: 0,
+      maxY: 150,
+      unit: '',
+      color: '#dc2626',
+      gradientId: 'grad-chs'
     },
     ambientTemp: {
       btnLabel: lang === 'zh' ? '环温' : 'Ambient Temp',
@@ -100,7 +133,7 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
       gradientId: 'grad-ambient'
     },
     discomfortIndex: {
-      btnLabel: lang === 'zh' ? '不快指数' : 'Discomfort',
+      btnLabel: lang === 'zh' ? 'DI指数' : 'Discomfort',
       minY: 10,
       maxY: 40,
       unit: '',
@@ -608,6 +641,7 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
           {/* Vitals & Environment grid */}
           <div className="detail-grid">
             
+            
             {/* physiological health metrics card */}
             <div className="sub-detail-card">
               <h4 className="sdc-title"><Heart size={16} className="color-crit" /> {t.detailPhysiologyTitle}</h4>
@@ -622,6 +656,12 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
                   <span className="smr-label">{t.detailSkinTemp}</span>
                   <span className="smr-val num-text">
                     {skinTemp > 0 ? skinTemp.toFixed(1) : '--'} <span className="smr-unit">°C</span>
+                  </span>
+                </div>
+                <div className="sdc-metric-row font-semibold border-top-dash" style={{ paddingTop: '6px' }}>
+                  <span className="smr-label">{t.detailCoreTemp}</span>
+                  <span className="smr-val num-text color-warn">
+                    {displayTc.toFixed(1)} <span className="smr-unit">°C</span>
                   </span>
                 </div>
                 <div className="sdc-metric-row">
@@ -665,6 +705,36 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
                   <span className="smr-label font-semibold">{t.detailWbgtBold}</span>
                   <span className="smr-val num-text color-warn">
                     {HeatStressIndex > 0 ? HeatStressIndex.toFixed(1) : '--'} <span className="smr-unit">°C</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 生理指数评估卡片 (PSI & CHS) */}
+            <div className="sub-detail-card index-card">
+              <h4 className="sdc-title"><ShieldAlert size={16} className="color-warn" /> {lang === 'zh' ? '动态生理应激评估' : 'Physiological Heat Load Assessment'}</h4>
+              <div className="sdc-metrics" style={{ gap: '16px' }}>
+                <div className="sdc-metric-row" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', paddingRight: '12px' }}>
+                    <span className="smr-label font-bold" style={{ fontSize: '13px' }}>{t.detailPSI}</span>
+                    <span style={{ fontSize: '11px', color: 'hsl(var(--text-secondary))', marginTop: '4px', lineHeight: '1.4' }}>
+                      {t.detailPSIDesc}
+                    </span>
+                  </div>
+                  <span className="smr-val num-text color-warn" style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                    {displayPsi.toFixed(1)}
+                  </span>
+                </div>
+                
+                <div className="sdc-metric-row border-top-dash" style={{ alignItems: 'flex-start', paddingTop: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', paddingRight: '12px' }}>
+                    <span className="smr-label font-bold" style={{ fontSize: '13px' }}>{t.detailCHS}</span>
+                    <span style={{ fontSize: '11px', color: 'hsl(var(--text-secondary))', marginTop: '4px', lineHeight: '1.4' }}>
+                      {t.detailCHSDesc}
+                    </span>
+                  </div>
+                  <span className="smr-val num-text color-crit" style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                    {displayChs.toFixed(1)}
                   </span>
                 </div>
               </div>
@@ -1012,6 +1082,9 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
         @media (min-width: 480px) {
           .detail-grid {
             grid-template-columns: 1fr 1fr;
+          }
+          .index-card {
+            grid-column: span 2;
           }
         }
 

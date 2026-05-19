@@ -28,8 +28,11 @@ const MinerCardComponent: React.FC<MinerCardProps> = ({
     riskLevel = 0,
     fallDetected = false,
     battery = 0,
-    lastUpdateTs
+    lastUpdateTs,
+    tc = 0
   } = telemetry;
+
+  const displayTc = tc > 0 ? tc : (skinTemp > 0 ? skinTemp + 4.0 : 37.0);
 
   const t = translations[lang];
 
@@ -106,15 +109,15 @@ const MinerCardComponent: React.FC<MinerCardProps> = ({
 
       {/* Real-time Vital Metrics */}
       <div className="metrics-grid">
-        {/* Metric 1: Skin Temp / Ambient Temp */}
+        {/* Metric 1: Core Temp (Tc) / Ambient Temp */}
         <div className="mini-metric">
           <div className="metric-icon-wrap bg-temp">
             <Thermometer size={16} />
           </div>
           <div className="metric-info">
-            <span className="metric-label">{t.cardSkinAmbientTemp}</span>
+            <span className="metric-label">{t.cardCoreAmbientTemp}</span>
             <span className="metric-value num-text">
-              {skinTemp > 0 ? skinTemp.toFixed(1) : '--'}
+              {displayTc.toFixed(1)}
               <span className="metric-unit">°C</span>
               <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>
               {ambientTemp > 0 ? ambientTemp.toFixed(1) : '--'}
