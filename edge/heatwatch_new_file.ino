@@ -1,3 +1,6 @@
+// clang-format off
+#include <lmic.h>
+#include <hal/hal.h>
 #include "MAX30105.h"
 #include "heartRate.h"
 #include <Adafruit_BME280.h>
@@ -7,9 +10,8 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <axp20x.h>
-#include <hal/hal.h>
-#include <lmic.h>
 #include <math.h>
+// clang-format on
 
 // ======================================================
 // HeatWatch ESP32 / T-Beam — Merged Firmware
@@ -72,7 +74,7 @@ SemaphoreHandle_t i2cMutex;
 // ================= GLOBAL SENSOR DATA =================
 volatile float airTemp = 0;
 volatile float humidity = 0;
-volatile float skinTemp = 36.5f;
+volatile float skinTemp = 33.0f;
 volatile float localWBGT = 0;
 volatile float effectiveWBGT = 0;
 volatile float externalWBGT = 0;
@@ -229,7 +231,8 @@ void determineHeatStress() {
   // 4. 核心体温一阶微分方程更新 (delta_t = 10s)
   float dTc = 0.000286f * hrInput - 0.005f * eta * (estimatedTc - skinTemp);
   estimatedTc += 10.0f * dTc;
-  estimatedTc = constrain(estimatedTc, 35.0f, 42.0f); // 安全防护：限制核心温度在物理合理范围内
+  estimatedTc = constrain(estimatedTc, 35.0f,
+                          42.0f); // 安全防护：限制核心温度在物理合理范围内
 
   // 6. Moran 生理应激指数 (PSI) 计算 (防漏报双模式)
   float tcTerm = (estimatedTc - 37.0f) / 2.5f;
