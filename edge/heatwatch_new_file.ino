@@ -576,7 +576,7 @@ void do_send(osjob_t *j) {
   // [3-4]   Eff. WBGT  ×10  int16
   // [5]     Risk Level      uint8 (0=normal 1=warn 2=critical)
   // [6]     Battery %       uint8
-  // [7]     Flags           uint8 (b0=fall b1=usb b2=active b[7:5]=ver(1))
+  // [7]     Flags           uint8 (b0=fall b1=usb b2=active)
   // [8]     BPM             uint8
   // [9-10]  Local WBGT ×10  int16
   // [11-12] Ext. WBGT  ×10  int16
@@ -588,14 +588,16 @@ void do_send(osjob_t *j) {
   int16_t t16 = (int16_t)constrain(lroundf(airTemp * 10), -32768, 32767);
   int16_t w16 = (int16_t)constrain(lroundf(effectiveWBGT * 10), -32768, 32767);
   uint8_t h8 = (uint8_t)constrain((int)lroundf(humidity * 2), 0, 200);
-  uint8_t fl = (fall ? 1 : 0) | (usb ? 2 : 0) | 0x04 | (1u << 5);
+  uint8_t fl = (fall ? 1 : 0) | (usb ? 2 : 0) | 0x04;
 
   int16_t locW16 = (int16_t)constrain(lroundf(localWBGT * 10), -32768, 32767);
-  int16_t extW16 = (int16_t)constrain(lroundf(externalWBGT * 10), -32768, 32767);
+  int16_t extW16 =
+      (int16_t)constrain(lroundf(externalWBGT * 10), -32768, 32767);
   int16_t sk16 = (int16_t)constrain(lroundf(skinTemp * 10), -32768, 32767);
   int16_t tc16 = (int16_t)constrain(lroundf(estimatedTc * 10), -32768, 32767);
   uint8_t psi8 = (uint8_t)constrain(lroundf(currentPSI * 10), 0, 255);
-  uint16_t chs16 = (uint16_t)constrain(lroundf(cumulativeHeatStrain * 10), 0, 65535);
+  uint16_t chs16 =
+      (uint16_t)constrain(lroundf(cumulativeHeatStrain * 10), 0, 65535);
 
   payloadBin[0] = (uint8_t)((uint16_t)t16 >> 8);
   payloadBin[1] = (uint8_t)((uint16_t)t16 & 0xFF);
