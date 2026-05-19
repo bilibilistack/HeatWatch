@@ -170,17 +170,35 @@ The device operates under LoRaWAN **ABP Activation Mode**:
 * **Clock Error**: Expands window tolerance to $80\%$ via `LMIC_setClockError(...)` to compensate for RTOS scheduling jitter and avoid missing downlinks.
 * **RF Config**: SF7 (`DR_SF7`) at $14\text{dBm}$ for TX. SF9 (`DR_SF9`) for RX2, with an RX1 delay of 1 second.
 
-### 5.2 9字节紧凑二进制数据载荷 / 9-Byte Binary Telemetry Payload
-为降低在信道中的占空比时间（Airtime），保证信道容量并降低功耗，固件弃用 JSON 或字符格式，改用高度压缩的 9 字节二进制格式传输遥测：
-* `[0-1] (int16_t)`：空气温度 $T_{air} \times 10$（精度 $0.1^\circ\text{C}$，有符号）
-* `[2] (uint8_t)`：空气湿度 $RH \times 2$（精度 $0.5\%$，无符号）
-* `[3-4] (int16_t)`：有效湿球黑球温度 $W_{eff} \times 10$（精度 $0.1^\circ\text{C}$，有符号）
-* `[5] (uint8_t)`：当前危险等级 `currentRisk`（$0=$ NORMAL, $1=$ WARNING, $2=$ CRITICAL）
-* `[6] (uint8_t)`：剩余电量百分比 $0 \sim 100$
-* `[7] (uint8_t)`：状态掩码（Bit 0: 跌倒触发标志；Bit 1: 外部供电中；Bit 2: 系统运行中；Bit 5-7: 协议版本号 `0x01`）
-* `[8] (uint8_t)`：平均心率 $BPM$（无符号整型）
+### 5.2 20字节紧凑二进制数据载荷与传输优化 / 20-Byte Binary Telemetry Payload & Transmission Optimization
 
-To reduce airtime and duty-cycle overhead, telemetry is serialized into a highly optimized 9-byte binary array instead of verbose JSON strings.
+为了在极其有限的信道资源（Duty-cycle）中塞入所有关键的实时生理与环境数据，并最大限度地节省 ThingsBoard 的数据库存储空间和前端轮询带宽，系统采用 **20字节高度压缩的二进制载荷** 并在云端和前端进行了 **Key 简短化优化（Shorten Keys）**。
+
+To transmit all critical real-time physiological and environmental metrics within tight LoRaWAN airtime (duty-cycle) limits while minimizing ThingsBoard storage and frontend poll bandwidth, the system implements a **20-byte binary payload** and **Shorten Keys** optimization.
+
+#### A. 20字节二进制数据结构 / 20-Byte Binary Data Structure:
+* **`[0 - 1] (int16_t)`**：空气温度 $T_{air} \times 10$（有符号，精度 $0.1^\circ\text{C}$，云端 Key: `temp` / `ambientTemp`）
+* **`[2] (uint8_t)`****：空气湿度 $RH \times 2$（无符号，精度 $0.5\%$，云端 Key: `hum` / `humidity`）
+* **`[3 - 4] (int16_t)`**：有效温湿指数 $W_{eff} \times 10$（有符号，精度 $0.1^\circ\text{C}$，云端 Key: `wetBulb` / `HeatStressIndex`）
+* **`[5] (uint8_t)`**：当前危险等级 `currentRisk`（$0=$ NORMAL, $1=$ WARNING, $2=$ CRITICAL，云端 Key: `risk` / `riskLevel`）
+* **`[6] (uint8_t)`**：剩余电量百分比 $0 \sim 100$（云端 Key: `battery`）
+* **`[7] (uint8_t)`**：状态掩码（Bit 0: 跌倒标志 `fall`；Bit 1: 外部 USB 供电中 `usb`；Bit 2: 系统运行中）
+* **`[8] (uint8_t)`**：平均心率 $BPM$（云端 Key: `heartRateAvg`）
+* **`[9 - 10] (int16_t)`**：本地湿球温度 $LocW \times 10$（有符号，精度 $0.1^\circ\text{C}$，云端 Key: `locW`）
+* **`[11 - 12] (int16_t)`**：外部气象下发 WBGT $ExtW \times 10$（有符号，精度 $0.1^\circ\text{C}$，云端 Key: `extW`）
+* **`[13 - 14] (int16_t)`**：体温 $Sk \times 10$（有符号，精度 $0.1^\circ\text{C}$，云端 Key: `skinTemp`）
+* **`[15 - 16] (int16_t)`**：核心体温 $Tc \times 10$（有符号，精度 $0.1^\circ\text{C}$，云端 Key: `tc`）
+* **`[17] (uint8_t)`**：生理应激指数 $PSI \times 10$（无符号，精度 $0.1$，云端 Key: `psi`）
+* **`[18 - 19] (uint16_t)`**：累积热应变蓄积量 $CHS \times 10$（无符号，精度 $0.1$，云端 Key: `chs`）
+
+#### B. 存储与传输优化 (Shorten Keys):
+为防止庞大的 JSON 键名塞满云端时序数据库（Timeseries Database）并拖慢前端的网络数据轮询响应，ThingsBoard 在解析 20 字节时做了如下 Key 缩短处理，Next.js 前端在读取到时会自动进行匹配：
+- 本地湿球温度 $\to$ **`locW`**
+- 外部气象湿球温度 $\to$ **`extW`**
+- 体表皮肤温度 $\to$ **`skT`** (仅在 JSON 嵌套中简写为 `skT`)
+- 估算核心温度 $\to$ **`tc`**
+- 生理应激指数 $\to$ **`psi`**
+- 累积热应变蓄积量 $\to$ **`chs`**
 
 ---
 
