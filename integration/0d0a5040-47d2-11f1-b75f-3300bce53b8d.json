@@ -30,7 +30,7 @@
     "debugMode" : false,
     "debugSettings" : {
       "allEnabled" : false,
-      "allEnabledUntil" : 1779169629381,
+      "allEnabledUntil" : 1779177762274,
       "failuresEnabled" : true
     },
     "defaultConverterId" : {
@@ -87,7 +87,7 @@
       "doubleValue" : null,
       "jsonValue" : "{\"success\":true}",
       "key" : "integration_status_tb-ie-main-1",
-      "lastUpdateTs" : 1779168730351,
+      "lastUpdateTs" : 1779176863246,
       "longValue" : null,
       "strValue" : null
     } ]
