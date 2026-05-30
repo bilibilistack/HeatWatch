@@ -67,7 +67,7 @@ The core of the system is the **ESP32-TTGO** development board, which performs l
 
 ```text
 HeatWatch/
-├── edge/               # ESP32 firmware (Arduino framework)
+├── edge/               # ESP32 firmware (Arduino framework) heatwatch_final_firmware.ino
 ├── backend/            # ThingsBoard configurations & MQTT scripts
 ├── frontend/           # Next.js Supervisor Control Console (Dashboard UI)
 ├── simulator/          # Python-based device simulator & test tools
