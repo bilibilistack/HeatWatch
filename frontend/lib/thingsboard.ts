@@ -107,6 +107,11 @@ export interface TelemetryValues {
   fall?: number;     // for lilygo mapping
   active_signal?: number;
   lastUpdateTs?: number;
+  locW?: number;
+  extW?: number;
+  tc?: number;
+  psi?: number;
+  chs?: number;
 }
 
 /**
@@ -117,11 +122,12 @@ export async function getLatestTelemetry(deviceId: string): Promise<TelemetryVal
   const baseUrl = process.env.THINGSBOARD_URL || 'https://thingsboard.cloud';
   const token = await getAuthToken();
 
-  // We query all potential keys for both ESP32_TTGo and ESP32_LilyGo models, including "decoded" containing LoRaWAN uplinks
+  // We query all potential keys for both ESP32_TTGo and ESP32_LilyGo models, including "decoded" containing LoRaWAN uplinks and shortened keys
   const keys = [
     'heartRateAvg', 'skinTemp', 'ambientTemp', 'humidity', 'pressure', 
     'HeatStressIndex', 'discomfortIndex', 'riskLevel', 'fallDetected', 'battery',
-    'temp', 'hum', 'wetBulb', 'risk', 'fall', 'active_signal', 'decoded'
+    'temp', 'hum', 'wetBulb', 'risk', 'fall', 'active_signal', 'decoded',
+    'locW', 'extW', 'tc', 'psi', 'chs'
   ].join(',');
 
   const response = await fetch(`${baseUrl}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=${keys}`, {
@@ -193,6 +199,13 @@ export async function getLatestTelemetry(deviceId: string): Promise<TelemetryVal
         if (tel.heartrate !== undefined) result.heartRateAvg = parseFloat(tel.heartrate);
         if (tel.risk !== undefined) result.risk = parseFloat(tel.risk);
         
+        if (tel.locW !== undefined) result.locW = parseFloat(tel.locW);
+        if (tel.extW !== undefined) result.extW = parseFloat(tel.extW);
+        if (tel.skT !== undefined) result.skinTemp = parseFloat(tel.skT);
+        if (tel.tc !== undefined) result.tc = parseFloat(tel.tc);
+        if (tel.psi !== undefined) result.psi = parseFloat(tel.psi);
+        if (tel.chs !== undefined) result.chs = parseFloat(tel.chs);
+        
         // Also force-update standard active telemetry variables so normalization handles them
         if (result.temp !== undefined) result.ambientTemp = result.temp;
         if (result.hum !== undefined) result.humidity = result.hum;
@@ -216,6 +229,11 @@ export async function getLatestTelemetry(deviceId: string): Promise<TelemetryVal
   if (result.hum !== undefined && result.humidity === undefined) result.humidity = result.hum;
   if (result.wetBulb !== undefined && result.HeatStressIndex === undefined) result.HeatStressIndex = result.wetBulb;
   if (result.risk !== undefined && result.riskLevel === undefined) result.riskLevel = result.risk;
+  
+  // Calculate discomfortIndex on the fly
+  if (result.ambientTemp !== undefined && result.humidity !== undefined) {
+    result.discomfortIndex = result.ambientTemp - 0.55 * (1 - 0.01 * result.humidity) * (result.ambientTemp - 14.5);
+  }
   
   // Heart rate mapping fallback (if not present, default to 0 or null)
   if (result.heartRateAvg === undefined) result.heartRateAvg = 0;
@@ -282,6 +300,9 @@ export interface HistoryPoint {
   ambientTemp: number;
   HeatStressIndex: number;
   discomfortIndex: number;
+  tc: number;
+  psi: number;
+  chs: number;
 }
 
 /**
@@ -296,10 +317,11 @@ export async function getHistoricalTelemetry(deviceId: string, minutes: number =
   const endTs = Date.now();
   const startTs = endTs - minutes * 60 * 1000;
   
-  // Include "decoded" in keys to extract historical timeseries from LoRa payloads
+  // Include "decoded" and optimized keys in keys to extract historical timeseries from LoRa payloads
   const keys = [
     'heartRateAvg', 'skinTemp', 'ambientTemp', 'humidity', 'pressure', 
-    'HeatStressIndex', 'discomfortIndex', 'temp', 'hum', 'wetBulb', 'decoded'
+    'HeatStressIndex', 'discomfortIndex', 'temp', 'hum', 'wetBulb', 'decoded',
+    'locW', 'extW', 'tc', 'psi', 'chs'
   ].join(',');
 
   let rawData: any = {};
@@ -391,7 +413,7 @@ export async function getHistoricalTelemetry(deviceId: string, minutes: number =
       const getVal = (key: string, lilygoKey?: string): number | undefined => {
         // First try to extract from closest decoded telemetry payload!
         if (decodedTelemetry) {
-          const mapKey = key === 'HeatStressIndex' ? 'wbgt' : (key === 'heartRateAvg' ? 'heartrate' : (key === 'ambientTemp' ? 'temp' : (key === 'humidity' ? 'hum' : key)));
+          const mapKey = key === 'HeatStressIndex' ? 'wbgt' : (key === 'heartRateAvg' ? 'heartrate' : (key === 'ambientTemp' ? 'temp' : (key === 'humidity' ? 'hum' : (key === 'skinTemp' ? 'skT' : (key === 'localWBGT' ? 'locW' : (key === 'estimatedTc' ? 'tc' : (key === 'currentPSI' ? 'psi' : (key === 'cumulativeHeatStrain' ? 'chs' : key))))))));
           if (decodedTelemetry[mapKey] !== undefined) {
             const val = parseFloat(decodedTelemetry[mapKey]);
             if (!isNaN(val)) return val;
@@ -421,8 +443,20 @@ export async function getHistoricalTelemetry(deviceId: string, minutes: number =
       const skin = getVal('skinTemp') ?? baseSkinTemp;
       const amb = getVal('ambientTemp', 'temp') ?? baseAmbientTemp;
       const hs = getVal('HeatStressIndex', 'wetBulb') ?? baseHeatStress;
-      const di = getVal('discomfortIndex') ?? baseDiscomfort;
+      const humVal = getVal('humidity', 'hum') ?? 50;
+      
+      const rawDi = getVal('discomfortIndex');
+      const di = rawDi !== undefined ? rawDi : (amb - 0.55 * (1 - 0.01 * humVal) * (amb - 14.5));
       const hr = getVal('heartRateAvg') ?? baseHeartRate;
+      
+      const rawTc = getVal('tc') ?? getVal('estimatedTc');
+      const tcVal = rawTc !== undefined ? rawTc : (skin + 4.0);
+
+      const rawPsi = getVal('psi') ?? getVal('currentPSI');
+      const psiVal = rawPsi !== undefined ? rawPsi : 0;
+
+      const rawChs = getVal('chs') ?? getVal('cumulativeHeatStrain');
+      const chsVal = rawChs !== undefined ? rawChs : 0;
 
       historyPoints.push({
         ts,
@@ -431,7 +465,10 @@ export async function getHistoricalTelemetry(deviceId: string, minutes: number =
         skinTemp: parseFloat(skin.toFixed(1)),
         ambientTemp: parseFloat(amb.toFixed(1)),
         HeatStressIndex: parseFloat(hs.toFixed(1)),
-        discomfortIndex: parseFloat(di.toFixed(1))
+        discomfortIndex: parseFloat(di.toFixed(1)),
+        tc: parseFloat(tcVal.toFixed(1)),
+        psi: parseFloat(psiVal.toFixed(1)),
+        chs: parseFloat(chsVal.toFixed(1))
       });
     });
   }
@@ -453,6 +490,10 @@ export async function getHistoricalTelemetry(deviceId: string, minutes: number =
       const HeatStressIndex = baseHeatStress + (sineWave * 0.7) + noise * 1.5;
       const discomfortIndex = baseDiscomfort + (sineWave * 0.5) + noise;
       const heartRateAvg = baseHeartRate + Math.round(sineWave * 6 + (Math.random() - 0.5) * 5);
+      
+      const tcVal = (latest.tc !== undefined && latest.tc > 0) ? latest.tc + (sineWave * 0.1) : (skinTemp + 4.0);
+      const psiVal = Math.max(0, Math.min(10, (latest.psi !== undefined && latest.psi > 0) ? latest.psi + (sineWave * 0.5) : (sineWave > 0 ? sineWave * 2.0 : 0)));
+      const chsVal = Math.max(0, (latest.chs !== undefined && latest.chs > 0) ? latest.chs + (progress * 15) : (progress * 8.5));
 
       historyPoints.push({
         ts,
@@ -461,7 +502,10 @@ export async function getHistoricalTelemetry(deviceId: string, minutes: number =
         skinTemp: parseFloat(Math.max(34, Math.min(42, skinTemp)).toFixed(1)),
         ambientTemp: parseFloat(Math.max(10, Math.min(55, ambientTemp)).toFixed(1)),
         HeatStressIndex: parseFloat(Math.max(10, Math.min(50, HeatStressIndex)).toFixed(1)),
-        discomfortIndex: parseFloat(Math.max(10, Math.min(45, discomfortIndex)).toFixed(1))
+        discomfortIndex: parseFloat(Math.max(10, Math.min(45, discomfortIndex)).toFixed(1)),
+        tc: parseFloat(Math.max(35, Math.min(42, tcVal)).toFixed(1)),
+        psi: parseFloat(psiVal.toFixed(1)),
+        chs: parseFloat(chsVal.toFixed(1))
       });
     }
   }

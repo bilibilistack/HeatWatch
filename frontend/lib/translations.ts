@@ -45,7 +45,7 @@ export const translations = {
     cardSecondsAgo: '秒前',
     cardMinutesAgo: '分钟前',
     cardOfflineWarning: '设备可能已断联',
-    cardSkinAmbientTemp: '体温 / 环境温度',
+    cardCoreAmbientTemp: '核心温度 Tc / 环境',
     cardRiskLevel: '风险等级',
     
     // Detail Drawer
@@ -55,6 +55,11 @@ export const translations = {
     detailPhysiologyTitle: '矿工生理状态',
     detailHeartRateAvg: '心率 (Avg)',
     detailSkinTemp: '体表温度',
+    detailCoreTemp: '核心温度 (Tc)',
+    detailPSI: '生理应激指数 (PSI)',
+    detailPSIDesc: '即时生理热应力指标 (0-10)。评估心率和核心体温偏离静息状态的相对幅度，数值越大负荷越高。',
+    detailCHS: '累积热应变蓄积量 (CHS)',
+    detailCHSDesc: '人体在作业期间累积的总热剂量。在 PSI > 3.0（开始出现热负荷）时持续增加。',
     detailEnvironmentTitle: '作业环境指标',
     detailRelativeHumidity: '相对湿度',
     detailDiscomfortIndex: '不舒适指数 (DI)',
@@ -89,6 +94,11 @@ export const translations = {
     actionHydrationBtn: '强制发送 0xF4 下行喝水震动指令',
     actionHydratingBtn: '正在下发喝水震动...',
     
+    actionEvacuationTitle: '控制中心紧急撤离广播 (地震/火灾/瓦斯等)',
+    actionEvacuationDesc: '在发生地震、瓦斯泄露、火灾等重大紧急情况时，从控制中心向该设备一键下发 0xF1 强震动指令，强制设备发出连续高频震动，通知员工立刻撤离。',
+    actionEvacuationBtn: '下发 0xF1 紧急撤离强震指令 (Evac Alert)',
+    actionEvacuatingBtn: '正在发送紧急撤离指令...',
+    
     // Status Banner Responses
     statusParamsSaved: '个性化生理参数已成功保存！已更新预警算法。',
     statusRenameSuccess: '设备名称成功修改为: "{name}"',
@@ -97,7 +107,9 @@ export const translations = {
     statusWbgtSuccess: '🌡️ 外部传感器 WBGT 设定为 {wbgt}°C (0xF2) 已发送！',
     statusWbgtFailed: '设定失败: ',
     statusHydrationSuccess: '💧 喝水提醒脉冲指令 (0xF4 Downlink) 已成功下发至设备！',
-    statusHydrationFailed: '发送失败: '
+    statusHydrationFailed: '发送失败: ',
+    statusEvacuationSuccess: '🚨 紧急撤离强震指令 (0xF1 Downlink) 已成功下发！',
+    statusEvacuationFailed: '发送撤离指令失败: '
   },
   en: {
     // Header & Meta
@@ -143,7 +155,7 @@ export const translations = {
     cardSecondsAgo: 's ago',
     cardMinutesAgo: 'm ago',
     cardOfflineWarning: 'Device might be disconnected',
-    cardSkinAmbientTemp: 'Skin / Ambient Temp',
+    cardCoreAmbientTemp: 'Core Temp Tc / Ambient',
     cardRiskLevel: 'Risk Level',
     
     // Detail Drawer
@@ -153,6 +165,11 @@ export const translations = {
     detailPhysiologyTitle: 'Miner Vitals',
     detailHeartRateAvg: 'Heart Rate (Avg)',
     detailSkinTemp: 'Skin Temp',
+    detailCoreTemp: 'Core Temp (Tc)',
+    detailPSI: 'Physiological Strain Index (PSI)',
+    detailPSIDesc: 'Instantaneous physiological heat load (0-10). Combines deviation of heart rate and core temperature from baseline.',
+    detailCHS: 'Cumulative Heat Strain (CHS)',
+    detailCHSDesc: 'Accumulated thermal strain dose during shift. Integrates over time whenever PSI > 3.0.',
     detailEnvironmentTitle: 'Environmental Index',
     detailRelativeHumidity: 'Humidity',
     detailDiscomfortIndex: 'Discomfort Index (DI)',
@@ -187,6 +204,11 @@ export const translations = {
     actionHydrationBtn: 'Force Send 0xF4 Downlink Hydration Reminder',
     actionHydratingBtn: 'Sending vibration...',
     
+    actionEvacuationTitle: 'Emergency Evacuation Broadcast (Earthquake/Fire/Gas, etc.)',
+    actionEvacuationDesc: 'In case of catastrophic events such as earthquakes, gas leaks, or fires, click to dispatch a one-key 0xF1 force vibration command from the control room, forcing the wearable to vibrate continuously and notify the miner to evacuate immediately.',
+    actionEvacuationBtn: 'Send 0xF1 Emergency Evacuation Alert (Evac Alert)',
+    actionEvacuatingBtn: 'Sending evacuation alert...',
+
     // Status Banner Responses
     statusParamsSaved: 'Personal physiological profile successfully saved and algorithmic offset applied!',
     statusRenameSuccess: 'Device display name successfully renamed to: "{name}"',
@@ -195,6 +217,8 @@ export const translations = {
     statusWbgtSuccess: '🌡️ External calibrated WBGT set to {wbgt}°C (0xF2) successfully!',
     statusWbgtFailed: 'Setting failed: ',
     statusHydrationSuccess: '💧 Hydration haptic vibration reminder (0xF4 Downlink) has been triggered successfully!',
-    statusHydrationFailed: 'Trigger failed: '
+    statusHydrationFailed: 'Trigger failed: ',
+    statusEvacuationSuccess: '🚨 Emergency evacuation forced vibration (0xF1 Downlink) has been dispatched successfully!',
+    statusEvacuationFailed: 'Evacuation dispatch failed: '
   }
 };

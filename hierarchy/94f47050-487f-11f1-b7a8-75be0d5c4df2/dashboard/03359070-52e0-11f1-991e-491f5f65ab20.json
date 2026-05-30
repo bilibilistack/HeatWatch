@@ -83,7 +83,7 @@
                 "useShowWidgetActionFunction" : false,
                 "showWidgetActionFunction" : "return true;",
                 "type" : "custom",
-                "customFunction" : "widgetContext.http.post(\n    `/api/rpc/oneway/${entityId.id}`,\n    {\n        method: \"test\",\n        params: {}\n    }\n).subscribe(\n    () => widgetContext.showSuccessToast(\"RPC sent\"),\n    (err) => {\n        console.error(err);\n        widgetContext.showErrorToast(\n            JSON.stringify(err.error || err.message)\n        );\n    }\n);",
+                "customFunction" : "widgetContext.http.post(\n    `/api/rpc/oneway/${entityId.id}`,\n    {\n        method: \"RPC\",\n        params: {\n            \"forceVibration\":true\n        }\n    }\n).subscribe(\n    () => widgetContext.showSuccessToast(\"RPC sent\"),\n    (err) => {\n        console.error(err);\n        widgetContext.showErrorToast(\n            JSON.stringify(err.error || err.message)\n        );\n    }\n);",
                 "openInSeparateDialog" : false,
                 "openInPopover" : false,
                 "id" : "c51e8d78-9ac0-5cf1-074a-bc96858c3189"
@@ -100,7 +100,7 @@
           "col" : 0,
           "id" : "35b141e0-593f-6d0f-394f-1ed58cf1f500"
         },
-        "6c65192a-10ae-ce33-bb48-2dfdd2a632c8" : {
+        "7bf8b68a-96a0-4df3-387d-2e4d78068780" : {
           "typeFullFqn" : "system.control_widgets.rpc_debug_terminal",
           "type" : "rpc",
           "sizeX" : 9.5,
@@ -112,9 +112,36 @@
             "color" : "rgba(255, 254, 254, 0.87)",
             "padding" : "0px",
             "settings" : {
-              "requestTimeout" : 10000,
-              "requestPersistent" : false,
-              "persistentPollingInterval" : 5000
+              "parseGpioStatusFunction" : "return body[pin] === true;",
+              "gpioStatusChangeRequest" : {
+                "method" : "setGpioStatus",
+                "paramsBody" : "{\n   \"pin\": \"{$pin}\",\n   \"enabled\": \"{$enabled}\"\n}"
+              },
+              "requestTimeout" : 500,
+              "switchPanelBackgroundColor" : "#b71c1c",
+              "gpioStatusRequest" : {
+                "method" : "getGpioStatus",
+                "paramsBody" : "{}"
+              },
+              "gpioList" : [ {
+                "pin" : 1,
+                "label" : "GPIO 1",
+                "row" : 0,
+                "col" : 0,
+                "_uniqueKey" : 0
+              }, {
+                "pin" : 2,
+                "label" : "GPIO 2",
+                "row" : 0,
+                "col" : 1,
+                "_uniqueKey" : 1
+              }, {
+                "pin" : 3,
+                "label" : "GPIO 3",
+                "row" : 1,
+                "col" : 0,
+                "_uniqueKey" : 2
+              } ]
             },
             "title" : "RPC debug terminal",
             "dropShadow" : true,
@@ -128,19 +155,13 @@
             "actions" : { },
             "datasources" : [ ],
             "targetDevice" : {
-              "type" : "device",
-              "deviceId" : "b84f9170-4edc-11f1-befc-1dd22c41a268"
-            },
-            "showTitleIcon" : false,
-            "titleTooltip" : "",
-            "enableDataExport" : true,
-            "widgetCss" : "",
-            "pageSize" : 1024,
-            "noDataDisplayMessage" : "ada"
+              "type" : "entity",
+              "entityAliasId" : "2e2f76be-0654-d2bb-8d91-747572cd5889"
+            }
           },
           "row" : 0,
           "col" : 0,
-          "id" : "6c65192a-10ae-ce33-bb48-2dfdd2a632c8"
+          "id" : "7bf8b68a-96a0-4df3-387d-2e4d78068780"
         }
       },
       "states" : {
@@ -156,7 +177,7 @@
                   "row" : 0,
                   "col" : 0
                 },
-                "6c65192a-10ae-ce33-bb48-2dfdd2a632c8" : {
+                "7bf8b68a-96a0-4df3-387d-2e4d78068780" : {
                   "sizeX" : 9,
                   "sizeY" : 5,
                   "row" : 8,

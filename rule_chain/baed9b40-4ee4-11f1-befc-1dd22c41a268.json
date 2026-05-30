@@ -33,6 +33,10 @@
       "toIndex" : 10,
       "type" : "Alarm Acknowledged"
     }, {
+      "fromIndex" : 0,
+      "toIndex" : 13,
+      "type" : "RPC Request to Device"
+    }, {
       "fromIndex" : 1,
       "toIndex" : 6,
       "type" : "Success"
@@ -91,8 +95,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 315,
-        "layoutY" : 30
+        "layoutX" : 154,
+        "layoutY" : 11
       },
       "configuration" : {
         "processingSettings" : {
@@ -119,8 +123,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 317,
-        "layoutY" : 103
+        "layoutX" : 315,
+        "layoutY" : 109
       },
       "configuration" : {
         "defaultTTL" : 0,
@@ -145,8 +149,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 765,
-        "layoutY" : 138
+        "layoutX" : 941,
+        "layoutY" : 147
       },
       "configuration" : {
         "scriptLang" : "JS",
@@ -169,8 +173,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 932,
-        "layoutY" : 199
+        "layoutX" : 1180,
+        "layoutY" : 197
       },
       "configuration" : {
         "fromTemplate" : "Customer A",
@@ -197,7 +201,7 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 1104,
+        "layoutX" : 1157,
         "layoutY" : 97
       },
       "configuration" : {
@@ -232,8 +236,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 560,
-        "layoutY" : 64
+        "layoutX" : 520,
+        "layoutY" : 22
       },
       "configuration" : {
         "tellFailureIfAbsent" : true,
@@ -260,8 +264,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 553,
-        "layoutY" : 139
+        "layoutX" : 648,
+        "layoutY" : 146
       },
       "configuration" : {
         "scriptLang" : "JS",
@@ -284,8 +288,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 550,
-        "layoutY" : 247
+        "layoutX" : 924,
+        "layoutY" : 249
       },
       "configuration" : {
         "scriptLang" : "JS",
@@ -312,8 +316,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 845,
-        "layoutY" : 277
+        "layoutX" : 1197,
+        "layoutY" : 319
       },
       "configuration" : {
         "fromTemplate" : "Customer A",
@@ -344,8 +348,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 356,
-        "layoutY" : 307
+        "layoutX" : 600,
+        "layoutY" : 312
       },
       "configuration" : {
         "scriptLang" : "JS",
@@ -372,8 +376,8 @@
     }, {
       "additionalInfo" : {
         "description" : "",
-        "layoutX" : 623,
-        "layoutY" : 358
+        "layoutX" : 943,
+        "layoutY" : 404
       },
       "configuration" : {
         "processingSettings" : {
@@ -397,6 +401,50 @@
       "ruleChainId" : null,
       "singletonMode" : false,
       "type" : "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode"
+    }, {
+      "additionalInfo" : {
+        "description" : "",
+        "layoutX" : 675,
+        "layoutY" : 511
+      },
+      "configuration" : {
+        "integrationId" : "0d0a5040-47d2-11f1-b75f-3300bce53b8d"
+      },
+      "configurationVersion" : 0,
+      "createdTime" : 0,
+      "debugSettings" : null,
+      "externalId" : null,
+      "id" : {
+        "entityType" : "RULE_NODE",
+        "id" : "56dc3900-539d-11f1-991e-491f5f65ab20"
+      },
+      "name" : "RPC to Device",
+      "queueName" : null,
+      "ruleChainId" : null,
+      "singletonMode" : false,
+      "type" : "org.thingsboard.rule.engine.integration.TbIntegrationDownlinkNode"
+    }, {
+      "additionalInfo" : {
+        "description" : "",
+        "layoutX" : 484,
+        "layoutY" : 426
+      },
+      "configuration" : {
+        "timeoutInSeconds" : 3600
+      },
+      "configurationVersion" : 0,
+      "createdTime" : 0,
+      "debugSettings" : null,
+      "externalId" : null,
+      "id" : {
+        "entityType" : "RULE_NODE",
+        "id" : "9c36f970-539f-11f1-befc-1dd22c41a268"
+      },
+      "name" : "rpc to",
+      "queueName" : null,
+      "ruleChainId" : null,
+      "singletonMode" : false,
+      "type" : "org.thingsboard.rule.engine.rpc.TbSendRPCRequestNode"
     } ],
     "ruleChainConnections" : null
   },

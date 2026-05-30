@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Heart, Thermometer, AlertTriangle, Droplet, 
-  Settings, Save, RefreshCw, VolumeX, ShieldAlert, Award, TrendingUp, Battery
+  Settings, Save, RefreshCw, VolumeX, ShieldAlert, Award, TrendingUp, Battery, Flame
 } from 'lucide-react';
 import { TelemetryValues } from '@/lib/thingsboard';
 import { translations, Language } from '@/lib/translations';
@@ -37,8 +37,15 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
     riskLevel = 0,
     fallDetected = false,
     battery = 0,
-    lastUpdateTs
+    lastUpdateTs,
+    tc = 0,
+    psi = 0,
+    chs = 0
   } = telemetry;
+
+  const displayTc = tc > 0 ? tc : (skinTemp > 0 ? skinTemp + 4.0 : 37.0);
+  const displayPsi = psi > 0 ? psi : 0;
+  const displayChs = chs > 0 ? chs : 0;
 
   const t = translations[lang];
 
@@ -71,7 +78,9 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
   // History trend state & dynamic metric configuration
   const [history, setHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
-  const [selectedMetric, setSelectedMetric] = useState<'HeatStressIndex' | 'skinTemp' | 'ambientTemp' | 'discomfortIndex' | 'heartRateAvg'>('HeatStressIndex');
+  const [selectedMetric, setSelectedMetric] = useState<
+    'HeatStressIndex' | 'skinTemp' | 'ambientTemp' | 'discomfortIndex' | 'heartRateAvg' | 'tc' | 'psi' | 'chs'
+  >('HeatStressIndex');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const metricConfig = {
@@ -84,12 +93,36 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
       gradientId: 'grad-wbgt'
     },
     skinTemp: {
-      btnLabel: lang === 'zh' ? '体温' : 'Skin Temp',
+      btnLabel: lang === 'zh' ? '皮温' : 'Skin Temp',
       minY: 32,
       maxY: 42,
       unit: '°C',
       color: 'hsl(var(--color-accent))',
       gradientId: 'grad-skin'
+    },
+    tc: {
+      btnLabel: lang === 'zh' ? '核温 (Tc)' : 'Core Temp (Tc)',
+      minY: 34,
+      maxY: 42,
+      unit: '°C',
+      color: '#ea580c',
+      gradientId: 'grad-tc'
+    },
+    psi: {
+      btnLabel: lang === 'zh' ? '应激 (PSI)' : 'Strain (PSI)',
+      minY: 0,
+      maxY: 10,
+      unit: '',
+      color: '#eab308',
+      gradientId: 'grad-psi'
+    },
+    chs: {
+      btnLabel: lang === 'zh' ? '蓄积 (CHS)' : 'Fatigue (CHS)',
+      minY: 0,
+      maxY: 150,
+      unit: '',
+      color: '#dc2626',
+      gradientId: 'grad-chs'
     },
     ambientTemp: {
       btnLabel: lang === 'zh' ? '环温' : 'Ambient Temp',
@@ -100,7 +133,7 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
       gradientId: 'grad-ambient'
     },
     discomfortIndex: {
-      btnLabel: lang === 'zh' ? '不快指数' : 'Discomfort',
+      btnLabel: lang === 'zh' ? 'DI指数' : 'Discomfort',
       minY: 10,
       maxY: 40,
       unit: '',
@@ -218,6 +251,7 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
   const [isResettingAlarm, setIsResettingAlarm] = useState(false);
   const [isSendingWbgt, setIsSendingWbgt] = useState(false);
   const [isSendingHydration, setIsSendingHydration] = useState(false);
+  const [isSendingEvacuation, setIsSendingEvacuation] = useState(false);
   const [rpcStatus, setRpcStatus] = useState<{ type: 'success' | 'error' | null; msg: string }>({ type: null, msg: '' });
 
   // Slider state for External WBGT (default to current HeatStressIndex or 28.0)
@@ -369,6 +403,30 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
       showStatus('error', t.statusHydrationFailed + e.message);
     } finally {
       setIsSendingHydration(false);
+    }
+  };
+
+  // RPC: Send Manual Evacuation Alarm (F1 Downlink)
+  const handleSendEvacuation = async () => {
+    setIsSendingEvacuation(true);
+    try {
+      // 0xF1 Downlink Force Evacuation Alert RPC call
+      const response = await fetch(`/api/devices/${deviceId}/rpc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'forceVibration', params: { command: 0xF1 } })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        showStatus('success', t.statusEvacuationSuccess);
+      } else {
+        throw new Error(data.error || '发送失败');
+      }
+    } catch (e: any) {
+      showStatus('error', t.statusEvacuationFailed + e.message);
+    } finally {
+      setIsSendingEvacuation(false);
     }
   };
 
@@ -608,6 +666,7 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
           {/* Vitals & Environment grid */}
           <div className="detail-grid">
             
+            
             {/* physiological health metrics card */}
             <div className="sub-detail-card">
               <h4 className="sdc-title"><Heart size={16} className="color-crit" /> {t.detailPhysiologyTitle}</h4>
@@ -622,6 +681,12 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
                   <span className="smr-label">{t.detailSkinTemp}</span>
                   <span className="smr-val num-text">
                     {skinTemp > 0 ? skinTemp.toFixed(1) : '--'} <span className="smr-unit">°C</span>
+                  </span>
+                </div>
+                <div className="sdc-metric-row font-semibold border-top-dash" style={{ paddingTop: '6px' }}>
+                  <span className="smr-label">{t.detailCoreTemp}</span>
+                  <span className="smr-val num-text color-warn">
+                    {displayTc.toFixed(1)} <span className="smr-unit">°C</span>
                   </span>
                 </div>
                 <div className="sdc-metric-row">
@@ -665,6 +730,36 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
                   <span className="smr-label font-semibold">{t.detailWbgtBold}</span>
                   <span className="smr-val num-text color-warn">
                     {HeatStressIndex > 0 ? HeatStressIndex.toFixed(1) : '--'} <span className="smr-unit">°C</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 生理指数评估卡片 (PSI & CHS) */}
+            <div className="sub-detail-card index-card">
+              <h4 className="sdc-title"><ShieldAlert size={16} className="color-warn" /> {lang === 'zh' ? '动态生理应激评估' : 'Physiological Heat Load Assessment'}</h4>
+              <div className="sdc-metrics" style={{ gap: '16px' }}>
+                <div className="sdc-metric-row" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', paddingRight: '12px' }}>
+                    <span className="smr-label font-bold" style={{ fontSize: '13px' }}>{t.detailPSI}</span>
+                    <span style={{ fontSize: '11px', color: 'hsl(var(--text-secondary))', marginTop: '4px', lineHeight: '1.4' }}>
+                      {t.detailPSIDesc}
+                    </span>
+                  </div>
+                  <span className="smr-val num-text color-warn" style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                    {displayPsi.toFixed(1)}
+                  </span>
+                </div>
+                
+                <div className="sdc-metric-row border-top-dash" style={{ alignItems: 'flex-start', paddingTop: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', paddingRight: '12px' }}>
+                    <span className="smr-label font-bold" style={{ fontSize: '13px' }}>{t.detailCHS}</span>
+                    <span style={{ fontSize: '11px', color: 'hsl(var(--text-secondary))', marginTop: '4px', lineHeight: '1.4' }}>
+                      {t.detailCHSDesc}
+                    </span>
+                  </div>
+                  <span className="smr-val num-text color-crit" style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                    {displayChs.toFixed(1)}
                   </span>
                 </div>
               </div>
@@ -814,6 +909,23 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
                   <><RefreshCw size={16} className="loader-icon" /> {t.actionHydratingBtn}</>
                 ) : (
                   <><Droplet size={16} /> {t.actionHydrationBtn}</>
+                )}
+              </button>
+            </div>
+
+            {/* 5. Emergency Evacuation Alert (F1) */}
+            <div className="action-card btn-evac-card">
+              <h3 className="ac-title" style={{ color: 'hsl(var(--color-critical))' }}><Flame size={18} /> {t.actionEvacuationTitle}</h3>
+              <p className="ac-desc">{t.actionEvacuationDesc}</p>
+              <button 
+                onClick={handleSendEvacuation} 
+                className="ac-btn btn-danger font-semibold w-full pulse-danger-glow"
+                disabled={isSendingEvacuation}
+              >
+                {isSendingEvacuation ? (
+                  <><RefreshCw size={16} className="loader-icon" /> {t.actionEvacuatingBtn}</>
+                ) : (
+                  <><ShieldAlert size={16} /> {t.actionEvacuationBtn}</>
                 )}
               </button>
             </div>
@@ -1012,6 +1124,9 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
         @media (min-width: 480px) {
           .detail-grid {
             grid-template-columns: 1fr 1fr;
+          }
+          .index-card {
+            grid-column: span 2;
           }
         }
 
@@ -1335,6 +1450,23 @@ const MinerDetailComponent: React.FC<MinerDetailProps> = ({
         .pulse-safe-glow {
           box-shadow: 0 0 10px rgba(21, 128, 61, 0.2);
           animation: pulse-safe 2s infinite;
+        }
+
+        .pulse-danger-glow {
+          box-shadow: 0 0 10px rgba(220, 38, 38, 0.2);
+          animation: pulse-danger 1.5s infinite;
+        }
+
+        @keyframes pulse-safe {
+          0% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(21, 128, 61, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(21, 128, 61, 0); }
+        }
+
+        @keyframes pulse-danger {
+          0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
         }
 
         .loader-icon {
